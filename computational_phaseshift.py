@@ -23,7 +23,7 @@ r2_ix = int(sigma*7/h)                          # index in position array of r2 
 N = int(sigma*7.5/h)                            # number of steps (just a bit more than those needed for r=sigma*7)
 x = (np.array(range(N)))*h + r_low              # define the mesh (note: first point is r_low)
 prefac = 1#/(3.48*10**(-5))                     # prefactor 2m/hbar^2 (deve restare 1 o metto il valore calcolato da Zeno?)
-b = 4*epsilon*sigma**(12)*prefac/25             # parametro per le bc
+b = (4*epsilon*sigma**(12)*prefac/25)**(1/10)   # parametro per le bc
 ell_max = 6                                     # number of values for the angular momentum
 phase = np.zeros(ell_max+1)                     # initialize a vector where we write the phase shifts
     
@@ -38,7 +38,7 @@ def K2_LJ(energy,position,spin):
 # Numerov algorithm set for Lennard Jones, gives a vector as output
 def numerov_LJ(energy,spin,position,step): 
     y_p = np.ones(len(position))
-    K2 = K2_LJ(energy,position,ell)             # evaluate the k^2 parameter   
+    K2 = K2_LJ(energy,position,spin)            # evaluate the k^2 parameter   
     y_p[0] = np.exp(-(b/position[0])**5)        # first point, set 1st boundary condition
     y_p[1] = np.exp(-(b/position[1])**5)        # second point, set 2nd boundary condition
     i=2
