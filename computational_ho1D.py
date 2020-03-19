@@ -15,12 +15,12 @@ eig = 0. #initialize a vector where we write the eigenvalues
 y_eig = np.zeros([N,1]) #initialize a vector where we write the eigenfunctions
 
 
-def K2(energy,position,spin): #functions that define the k^2 parameter in numerov for 1D ho
-    if spin==0:
-        return 2*energy-position**2  
-    else:
-        return 2*energy-position**2 - 2*spin*(spin+1)/position
-def numerov(energy,spin,position,step): #numerov algorithm, give as output a vector
+# Function that define the k^2 parameter in numerov for 1D ho
+def K2(energy,position,spin):
+    return 2*energy-position**2 - 2*spin*(spin+1)/position**2
+
+# Numerov algorithm, give as output a vector
+def numerov(energy,spin,position,step): 
     y_p = np.ones(len(x))
     K2_E = K2(energy,position,0) #evaluate the k^2 parameter   
     i=2
@@ -33,11 +33,12 @@ def numerov(energy,spin,position,step): #numerov algorithm, give as output a vec
     return y_p
 
 
-y_0 = numerov(E,0,x,h) #calculate the function on initial energy 
-control_0 = np.sign(y_0[N-1]) #where does it diverge at +infinity
-while E<E_max: #find eigenvalues by requiring y(+infinity)=0
-    y = numerov(E,0,x,h)  #compute y 
-    control_1 = np.sign(y[N-1]) #where does it diverge at +infinity
+
+y_0 = numerov(E,0,x,h)                  # calculate the function on initial energy 
+control_0 = np.sign(y_0[N-1])           # where does it diverge at +infinity
+while E<E_max:                          # find eigenvalues by requiring y(+infinity)=0
+    y = numerov(E,0,x,h)                # compute y 
+    control_1 = np.sign(y[N-1])         # where does it diverge at +infinity
     
     if control_0 != control_1 : #if the sign changes then y(+inifinity)=0 has just passed
         
