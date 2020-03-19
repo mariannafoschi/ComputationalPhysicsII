@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-
+#%% Definition of fundamental parameters
 h=0.001 #step 
-N =10**4 # number of steps
+N = int(1.5*10**4) # number of steps
 x= (np.array(range(N))-N/2)*h  #define the mesh
 
 E_max = 7 #maximum energy
@@ -12,12 +12,14 @@ E=0 #starting energy
 acc = 0.001 # accuracy in energy
 
 eig = 0. #initialize a vector where we write the eigenvalues
-y_eig = np.zeros([N,1]) #initialize a vector where we write the eigenfunctions
+y_eig = np.zeros([1,N]) #initialize a vector where we write the eigenfunctions
 
+
+#%% Definition of useful functions
 
 # Function that define the k^2 parameter in numerov for 1D ho
 def K2(energy,position,spin):
-    return 2*energy-position**2 - 2*spin*(spin+1)/position**2
+    return 2*energy-position**2#- 2*spin*(spin+1)/position**2
 
 # Numerov algorithm, give as output a vector
 def numerov(energy,spin,position,step): 
@@ -33,13 +35,14 @@ def numerov(energy,spin,position,step):
     return y_p
 
 
-
+#%% Main body
+    
 y_0 = numerov(E,0,x,h)                  # calculate the function on initial energy 
 control_0 = np.sign(y_0[N-1])           # where does it diverge at +infinity
 while E<E_max:                          # find eigenvalues by requiring y(+infinity)=0
     y = numerov(E,0,x,h)                # compute y 
     control_1 = np.sign(y[N-1])         # where does it diverge at +infinity
-    
+
     if control_0 != control_1 : #if the sign changes then y(+inifinity)=0 has just passed
         
         #initialize variables for tangent method
@@ -71,10 +74,10 @@ while E<E_max:                          # find eigenvalues by requiring y(+infin
     
         #compute eigenfunction
         y_new = numerov(np.mean([E_0, E_1]),0,x,h)
-        norm = np.dot(y_new[1:(N-1)],y_new[1:(N-1)])*h + (y_new[0]**2 +y_new[N-1]**2)/2
+        norm = (np.dot(y_new[1:(N-1)],y_new[1:(N-1)]) + (y_new[0]**2 +y_new[N-1]**2)/2)*h
         y_new =  y_new/np.sqrt(norm) 
         #copy eigenfunction
-        y_eig = np.append(y_eig,y_new)
+        y_eig = np.append(y_eig,np.reshape(y_new,(1,N)),axis=0)
         
         #plot the eigenfunction
         plt.plot(x,y_new)
@@ -84,12 +87,19 @@ while E<E_max:                          # find eigenvalues by requiring y(+infin
     y_0 = y
     control_0 = np.sign(y_0[N-1])
 
-# check with analytical solution  if you want   
+#%% Part in which we make a nice plot
+    #DA FARE
+    
+#%% Check with analytical solution. N=6  (if you want)   
 y_an = np.exp(-x**2 /2)*(64*x**6-480*x**4+720*x**2-120) # in this case the sixth eigenfunction
-norm = np.dot(y_an[1:(N-1)],y_an[1:(N-1)])*h + (y_an[0]**2 +y_an[N-1]**2)/2
+norm = (np.dot(y_an[1:(N-1)],y_an[1:(N-1)]) + (y_an[0]**2 +y_an[N-1]**2)/2)*h
 y_an= y_an/np.sqrt(norm)
 
-plt.plot(x,y_an)
+plt.figure()
+plt.title("Difference between our solution and analytic solution")
+#plt.plot(x,y_an)
+plt.plot(x,y_eig[7,:])
+plt.plot(x,y_an-y_eig[7])
 
 #plot the eigenvalue/analytical ones
 plt.figure()
