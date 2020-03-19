@@ -22,7 +22,8 @@ r1_ix = int(sigma*6/h)                          # index in position array of r1 
 r2_ix = int(sigma*7/h)                          # index in position array of r2 > r_max
 N = int(sigma*7.5/h)                            # number of steps (just a bit more than those needed for r=sigma*7)
 x = (np.array(range(N)))*h + r_low              # define the mesh (note: first point is r_low)
-prefac = 1#/(3.48*10**(-5))                     # prefactor 2m/hbar^2 (deve restare 1 o metto il valore calcolato da Zeno?)
+prefac = (1.05*10**(-34))**2 / (2*1.67*10**(-27)) /(3.18*10**(-10))**2 /(5.9*1.6*10**(-22))      # prefactor hbar^2/2m last two factor to trasform Jm^2 dimensions
+prefac = 1/prefac  # prefactor 2m/hbar^2 
 b = (4*epsilon*sigma**(12)*prefac/25)**(1/10)   # parametro per le bc
 ell_max = 6                                     # number of values for the angular momentum
 phase = np.zeros(ell_max+1)                     # initialize a vector where we write the phase shifts
