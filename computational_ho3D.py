@@ -47,19 +47,19 @@ def numerov(energy,spin,position,step):
 
 
 #%% Main body
-for l in range(3):
+for ell in range(3):
     E=0
-    y_0 = numerov(E,l,x,h)                  # calculate the function on initial energy 
+    y_0 = numerov(E,ell,x,h)                  # calculate the function on initial energy 
     control_0 = np.sign(y_0[N-1])           # where does it diverge at +infinity
     while E<E_max:                          # find eigenvalues by requiring y(+infinity)=0
-        y = numerov(E,l,x,h)                # compute y 
+        y = numerov(E,ell,x,h)                # compute y 
         control_1 = np.sign(y[N-1])         # where does it diverge at +infinity
     
         if control_0 != control_1 : #if the sign changes then y(+inifinity)=0 has just passed
             
             #initialize variables for tangent method
             E_0 = E-E_step 
-            y_0 = numerov(E-E_step,l,x,h)
+            y_0 = numerov(E-E_step,ell,x,h)
             E_1 = E
             y_1 = y
             delta = 1;
@@ -68,7 +68,7 @@ for l in range(3):
                 
                 E_2 = E_0 - y_0[N-1]*(E_1-E_0)/(y_1[N-1]-y_0[N-1])
                 
-                y_2 = numerov(E_2,l,x,h)
+                y_2 = numerov(E_2,ell,x,h)
                 
                 control_2 = np.sign(y_2[N-1])
                 
@@ -83,17 +83,17 @@ for l in range(3):
             
         
             #compute eigenfunction
-            y_new = numerov(np.mean([E_0, E_1]),l,x,h)
+            y_new = numerov(np.mean([E_0, E_1]),ell,x,h)
             norm = (np.dot(y_new[1:(N-1)],y_new[1:(N-1)]) + (y_new[0]**2 +y_new[N-1]**2)/2)*h
             y_new =  y_new/np.sqrt(norm) 
             #copy eigenfunction and eigenvalue
-            if l==0:
+            if ell==0:
                 y_eig_0 = np.append(y_eig_0,np.reshape(y_new,(1,N)),axis=0)
                 eig_0 = np.append(eig_0,np.mean([E_0, E_1]))
-            if l==1:
+            if ell==1:
                 y_eig_1 = np.append(y_eig_1,np.reshape(y_new,(1,N)),axis=0)
                 eig_1 = np.append(eig_1,np.mean([E_0, E_1]))
-            if l==2:
+            if ell==2:
                 y_eig_2 = np.append(y_eig_2,np.reshape(y_new,(1,N)),axis=0)
                 eig_2 = np.append(eig_2,np.mean([E_0, E_1]))
             
