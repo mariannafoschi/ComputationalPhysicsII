@@ -19,7 +19,7 @@ y_eig = np.zeros([1,N]) #initialize a vector where we write the eigenfunctions
 
 # Function that define the k^2 parameter in numerov for 1D ho
 def K2(energy,position,spin):
-    return 2*energy-position**2#- 2*spin*(spin+1)/position**2
+    return 2*energy-position**2
 
 # Numerov algorithm, give as output a vector
 def numerov(energy,spin,position,step): 
