@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 #%% Definition of fundamental parameters
 h=0.001 #step 
-N = int(0.5*10**4) # number of steps
-x= np.array(range(N))*h + h  #define the mesh
+N = int(0.7*10**4) # number of steps
+x= np.array(range(N))*h+h  #define the mesh
 
 E_max = 8 #maximum energy
 E_step= 0.09 #step in energy
@@ -30,14 +30,14 @@ y_eig_2 = np.zeros([1,N]) #initialize a vector where we write the eigenfunctions
 
 # Function that define the k^2 parameter in numerov for 3D ho
 def K2(energy,position,spin):
-    return 2*energy-position**2- 2*spin*(spin+1)/position**2
+    return 2*energy-position**2- spin*(spin+1)/position**2
 
 # Numerov algorithm, give as output a vector
 def numerov(energy,spin,position,step): 
     y_p = np.ones(len(x))
-    K2_E = K2(energy,position,0) #evaluate the k^2 parameter   
+    K2_E = K2(energy,position,spin) #evaluate the k^2 parameter   
     i=2
-    y_p[0] =h**(spin+1) #initial point, at infinity y=0
+    y_p[0] =(h)**(spin+1) #initial point, at infinity y=0
     y_p[1] = (2*h)**(spin+1) #second point, correct derivative to be set with normalization
     while i<N:
         y_p[i]= (2*y_p[i-1]*(1-5/12*step**2 *K2_E[i-1])-y_p[i-2]*(1+step**2 /12*K2_E[i-2]))/(1+step**2/12*K2_E[i])
@@ -126,8 +126,8 @@ for i in range(y_eig_2.shape[0]):
 #plot the eigenvalue/analytical ones
 plt.figure()
 plt.plot(np.array(range(len(eig_0[1:]))),eig_0[1:]/(2*np.array(range(len(eig_0[1:])))+1.5))
-plt.plot(np.array(range(len(eig_1[1:]))),eig_1[1:]/(2*np.array(range(len(eig_1[1:])))+1.5))
-plt.plot(np.array(range(len(eig_2[1:]))),eig_2[1:]/(2*np.array(range(len(eig_2[1:])))+1.5))
+plt.plot(np.array(range(len(eig_1[1:]))),eig_1[1:]/(2*np.array(range(len(eig_1[1:])))+1+1.5))
+plt.plot(np.array(range(len(eig_2[1:]))),eig_2[1:]/(2*np.array(range(len(eig_2[1:])))+2+1.5))
 plt.show()
 
 
