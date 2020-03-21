@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 
 #%% Definition of fundamental parameters
 h=0.001 #step 
-N = int(1.5*10**4) # number of steps
+N = int(1.4*10**4) # number of steps
 x= (np.array(range(N))-N/2)*h  #define the mesh
 
-E_max = 7 #maximum energy
+E_max = 5 #maximum energy
 E_step= 0.09 #step in energy
 E=0 #starting energy
 acc = 0.001 # accuracy in energy
@@ -90,16 +90,16 @@ while E<E_max:                          # find eigenvalues by requiring y(+infin
 #%% Part in which we make a nice plot
     #DA FARE
     
-#%% Check with analytical solution. N=6  (if you want)   
-y_an = np.exp(-x**2 /2)*(64*x**6-480*x**4+720*x**2-120) # in this case the sixth eigenfunction
-norm = (np.dot(y_an[1:(N-1)],y_an[1:(N-1)]) + (y_an[0]**2 +y_an[N-1]**2)/2)*h
-y_an= y_an/np.sqrt(norm)
-
-plt.figure()
-plt.title("Difference between our solution and analytic solution")
-#plt.plot(x,y_an)
-plt.plot(x,y_eig[7,:])
-plt.plot(x,y_an-y_eig[7])
+##%% Check with analytical solution. N=6  (if you want)   
+#y_an = np.exp(-x**2 /2)*(64*x**6-480*x**4+720*x**2-120) # in this case the sixth eigenfunction
+#norm = (np.dot(y_an[1:(N-1)],y_an[1:(N-1)]) + (y_an[0]**2 +y_an[N-1]**2)/2)*h
+#y_an= y_an/np.sqrt(norm)
+#
+#plt.figure()
+#plt.title("Difference between our solution and analytic solution")
+##plt.plot(x,y_an)
+#plt.plot(x,y_eig[7,:])
+#plt.plot(x,y_an-y_eig[7])
 
 #plot the eigenvalue/analytical ones
 plt.figure()
