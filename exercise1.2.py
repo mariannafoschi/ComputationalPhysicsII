@@ -7,6 +7,8 @@ Created on Thu Mar 19 22:45:26 2020
 
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.special as sp
+import scipy.misc as spm
 
 #%% Definition of fundamental parameters
 x_max = 7 # boundary of the mesh are -x_max, +x_max-h
@@ -144,59 +146,107 @@ plt.xlabel("Number of point in the mesh")
 plt.ylabel("Relative difference between eigenvalues")
 plt.show()
 
-#%% plot of the wavefunctions with N = N_mesh[6] = 10^4
-N = N_mesh[6]+1
-h = 2*x_max/(N-1)
-x = (np.array(range(N))-(N-1)/2)*h
+#%% plot of the wavefunctions with N = N_mesh[7] and l=0
+N = N_mesh[7]
+h = x_max/N
+x= (np.array(range(N)))*h + h 
 plt.figure()
 ax = plt.gca()
 ax.grid(True)
-for j in range(5): #loop on the energies
-    t,= plt.plot(x, y_eig[6,j,:N_mesh[6]+1])
-    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
+for j in range(3): #loop on the energies
+    t,= plt.plot(x, y_eig_0[7,j,:N_mesh[7]]/x)
+    t.set_label("l=0; n="+str(2*j))
 ax.legend()
-plt.xlabel("Position UNITA NATURALI")
-plt.ylabel("Wavefunction amplitude RADICE(1/UNITA NATURALI)")
+plt.xlabel("Position")
+plt.ylabel("Wavefunction amplitude")
 plt.show()
 
-#%% Plot of the eigenvalue with N = N_mesh[6] = 10^4
+#%% plot of the wavefunctions with N = N_mesh[7] and l=1
+N = N_mesh[7]
+h = x_max/N
+x= (np.array(range(N)))*h + h 
 plt.figure()
 ax = plt.gca()
 ax.grid(True)
-t, = plt.plot(range(5), eig[6,:], marker = ".", markersize = 6)
-t.set_label("Eigenvalues for a mesh of $10^4$ points")
+for j in range(3): #loop on the energies
+    t,= plt.plot(x, y_eig_1[7,j,:N_mesh[7]]/x)
+    t.set_label("l=1; n="+str(1+2*j))
+ax.legend()
+plt.xlabel("Position")
+plt.ylabel("Wavefunction amplitude")
+plt.show()
+
+#%% plot of the wavefunctions with N = N_mesh[7] and l=2
+N = N_mesh[7]
+h = x_max/N
+x= (np.array(range(N)))*h + h 
+plt.figure()
+ax = plt.gca()
+ax.grid(True)
+for j in range(3): #loop on the energies
+    t,= plt.plot(x, y_eig_2[7,j,:N_mesh[7]]/x)
+    t.set_label("l=2; n="+str(2+2*j))
+ax.legend()
+plt.xlabel("Position")
+plt.ylabel("Wavefunction amplitude")
+plt.show()
+
+#%% Plot of the eigenvalue with N = N_mesh[7]
+plt.figure()
+ax = plt.gca()
+ax.grid(True)
+t, = plt.plot(2*np.array(range(3)), eig_0[7,:], marker = "*", markersize = 10)
+t.set_label("Eigenvalues for a mesh of $4\cdot 10^4$ points")
+t, = plt.plot(1+2*np.array(range(3)), eig_1[7,:], marker = "+", markersize = 10)
+t.set_label("Eigenvalues for a mesh of $4\cdot 10^4$ points")
+t, = plt.plot(2*np.array(range(3))+2, eig_2[7,:], marker = ".", markersize = 6)
+t.set_label("Eigenvalues for a mesh of $4\cdot 10^4$ points")
 ax.legend()
 plt.xlabel("Quantum number n")
 plt.ylabel("Eigenvalue [UNITA]")
 plt.show()
 
-#%% plot the difference between the computed eigenfunction and the exact one
-y_exact = np.zeros((6,N_mesh[6]+1))
+#%% plot the relative difference between the computed eigenfunction and the exact one
+y_exact_0 = np.zeros((3,N_mesh[7]))
+y_exact_1 = np.zeros((3,N_mesh[7]))
+y_exact_2 = np.zeros((3,N_mesh[7]))
 pi = np.arctan(1)*4
-y_exact[0,:] = pi**(-1/4)*np.exp(-1/2*x**2)
-y_exact[1,:] = -pi**(-1/4)*np.exp(-x**2/2)*np.sqrt(2)*x
-y_exact[2,:] = pi**(-1/4)*np.exp(-x**2/2)/np.sqrt(2)*(2*x**2-1)
-y_exact[3,:] = -pi**(-1/4)*np.exp(-x**2/2)/np.sqrt(3)*(2*x**3-3*x)
-y_exact[4,:] = pi**(-1/4)*np.exp(-x**2/2)/2/np.sqrt(6)*(4*x**4-12*x**2+3)
+y_exact_0[0,:] = np.exp(-1/2*x**2)*sp.eval_genlaguerre(0,1/2,x**2)*np.sqrt( 1/np.sqrt(4*pi)*2**(0+2*0+3)*sp.factorial(0)/(2**0)/sp.factorial2(2*0+2*0+1) )
+y_exact_0[1,:] = np.exp(-1/2*x**2)*sp.eval_genlaguerre(1,1/2,x**2)*np.sqrt( 1/np.sqrt(4*pi)*2**(1+2*0+3)*sp.factorial(1)/(2**0)/sp.factorial2(2*1+2*0+1) )
+y_exact_0[2,:] = np.exp(-1/2*x**2)*sp.eval_genlaguerre(2,1/2,x**2)*np.sqrt( 1/np.sqrt(4*pi)*2**(2+2*0+3)*sp.factorial(2)/(2**0)/sp.factorial2(2*2+2*0+1) )
+y_exact_1[0,:] = x**1*np.exp(-1/2*x**2)*sp.eval_genlaguerre(0,3/2,x**2)*np.sqrt( 1/np.sqrt(4*pi)*2**(0+2*1+3)*sp.factorial(0)/(2**1)/sp.factorial2(2*0+2*1+1) )
+y_exact_1[1,:] = x**1*np.exp(-1/2*x**2)*sp.eval_genlaguerre(1,3/2,x**2)*np.sqrt( 1/np.sqrt(4*pi)*2**(1+2*1+3)*sp.factorial(1)/(2**1)/sp.factorial2(2*1+2*1+1) )
+y_exact_1[2,:] = x**1*np.exp(-1/2*x**2)*sp.eval_genlaguerre(2,3/2,x**2)*np.sqrt( 1/np.sqrt(4*pi)*2**(2+2*1+3)*sp.factorial(2)/(2**1)/sp.factorial2(2*2+2*1+1) )
+y_exact_2[0,:] = x**2*np.exp(-1/2*x**2)*sp.eval_genlaguerre(0,5/2,x**2)*np.sqrt( 1/np.sqrt(4*pi)*2**(0+2*2+3)*sp.factorial(0)/(2**2)/sp.factorial2(2*0+2*2+1) )
+y_exact_2[1,:] = x**2*np.exp(-1/2*x**2)*sp.eval_genlaguerre(1,5/2,x**2)*np.sqrt( 1/np.sqrt(4*pi)*2**(1+2*2+3)*sp.factorial(1)/(2**2)/sp.factorial2(2*1+2*2+1) )
+y_exact_2[2,:] = x**2*np.exp(-1/2*x**2)*sp.eval_genlaguerre(2,5/2,x**2)*np.sqrt( 1/np.sqrt(4*pi)*2**(2+2*2+3)*sp.factorial(2)/(2**2)/sp.factorial2(2*2+2*2+1) )
 plt.figure()
 ax = plt.gca()
 ax.grid(True)
-for j in range(5): #loop on the energies
-    t,= plt.semilogy(x, abs(y_eig[6,j,:N_mesh[6]+1]-y_exact[j,:]))#y_eig[6,j,:N_mesh[6]+1]-
+for j in range(3): #loop on the energies
+    t,= plt.semilogy(x, abs((y_eig_0[7,j,:N_mesh[7]]/x-y_exact_0[j,:])/y_exact_0[j,:]))#y_eig[6,j,:N_mesh[6]+1]-
     t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
-ax.legend()
+    t,= plt.semilogy(x, abs((y_eig_1[7,j,:N_mesh[7]]/x-y_exact_1[j,:])/y_exact_1[j,:]))#y_eig[6,j,:N_mesh[6]+1]-
+    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
+    t,= plt.semilogy(x, abs(((y_eig_2[7,j,:N_mesh[7]]/x-y_exact_2[j,:]))/y_exact_2[j,:]))#y_eig[6,j,:N_mesh[6]+1]-
+    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
+    ax.legend()
 plt.xlabel("Position UNITA NATURALI")
 plt.ylabel("Wavefunction amplitude RADICE(1/UNITA NATURALI)")
 plt.show()
 
-#%% plot the relative difference between the computed eigenfunction and the exact one
+#%% plot the difference between the computed eigenfunction and the exact one
 plt.figure()
 ax = plt.gca()
 ax.grid(True)
-for j in range(5): #loop on the energies
-    t,= plt.semilogy(x, abs((y_eig[6,j,:N_mesh[6]+1]-y_exact[j,:])/y_exact[j,:]))
+for j in range(3): #loop on the energies
+    t,= plt.semilogy(x, abs((y_eig_0[7,j,:N_mesh[7]]/x-y_exact_0[j,:])))#y_eig[6,j,:N_mesh[6]+1]-
     t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
-ax.legend()
+    t,= plt.semilogy(x, abs((y_eig_1[7,j,:N_mesh[7]]/x-y_exact_1[j,:])))#y_eig[6,j,:N_mesh[6]+1]-
+    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
+    t,= plt.semilogy(x, abs(((y_eig_2[7,j,:N_mesh[7]]/x-y_exact_2[j,:]))))#y_eig[6,j,:N_mesh[6]+1]-
+    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
+    ax.legend()
 plt.xlabel("Position UNITA NATURALI")
 plt.ylabel("Wavefunction amplitude RADICE(1/UNITA NATURALI)")
 plt.show()
@@ -204,7 +254,9 @@ plt.show()
        
 
             
-
+#%%
+plt.figure()
+t,= plt.semilogy(x, abs((y_exact_2[1,:])))
 
 
 
