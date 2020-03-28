@@ -127,21 +127,22 @@ ax.grid(True)
 ax.set_xscale("Log")
 ax.set_yscale("Log")
 #plot with l=0
+colors=["#58e201ff", "#01bd17ff", "#007a0e"]
 for i in range(eig_0.shape[1]):
-    t, = plt.loglog(N_mesh, np.abs(eig_0[:,i]-(2*i+1.5))/(2*i+1.5), marker = ".", markersize = 6)
+    t, = plt.loglog(N_mesh, np.abs(eig_0[:,i]-(2*i+1.5))/(2*i+1.5), marker = ".", markersize = 6, color=colors[i])
     t.set_label("n="+str(2*i)+"; l=0")
-#plot with l=0
+#plot with l=1
+colors=["#21b2b4ff", "#0055ffff", "#00007fff"]    
 for i in range(eig_1.shape[1]):
-    t, = plt.loglog(N_mesh, np.abs(eig_1[:,i]-((2*i+1)+1.5))/((2*i+1)+1.5), marker = "x", markersize = 6)
+    t, = plt.loglog(N_mesh, np.abs(eig_1[:,i]-((2*i+1)+1.5))/((2*i+1)+1.5), marker = "x", markersize = 6, color=colors[i])
     t.set_label("n="+str(2*i+1)+"; l=1")
-#plot with l=0
+#plot with l=2
+colors=["#ff5500ff", "#ff0000", "#aa0000ff"]
 for i in range(eig_2.shape[1]):
-    t, = plt.loglog(N_mesh, np.abs(eig_2[:,i]-(2*(i+1)+1.5))/(2*(i+1)+1.5), marker = "*", markersize = 6)
+    t, = plt.loglog(N_mesh, np.abs(eig_2[:,i]-(2*(i+1)+1.5))/(2*(i+1)+1.5), marker = "*", markersize = 6, color=colors[i])
     t.set_label("n="+str(2*(i+1))+"; l=2")
 ax.legend()
 plt.errorbar(N_mesh, np.abs(eig_0[:,1]-(3+0.5))/(3+0.5), yerr=acc/2/(3+0.5)*np.ones(len(N_mesh)), fmt = "none", ecolor = "green")
-plt.errorbar(N_mesh, np.abs(eig_1[:,1]-(4+0.5))/(4+0.5), yerr=acc/2/(4+0.5)*np.ones(len(N_mesh)), fmt = "none", ecolor = "green")
-plt.errorbar(N_mesh, np.abs(eig_2[:,1]-(5+0.5))/(5+0.5), yerr=acc/2/(5+0.5)*np.ones(len(N_mesh)), fmt = "none", ecolor = "green")
 plt.xlabel("Number of point in the mesh")
 plt.ylabel("Relative difference between eigenvalues")
 plt.show()
@@ -153,9 +154,10 @@ x= (np.array(range(N)))*h + h
 plt.figure()
 ax = plt.gca()
 ax.grid(True)
+colors=["#58e201ff", "#01bd17ff", "#007a0e"]
 for j in range(3): #loop on the energies
-    t,= plt.plot(x, y_eig_0[7,j,:N_mesh[7]]/x)
-    t.set_label("l=0; n="+str(2*j))
+    t,= plt.plot(x, y_eig_0[7,j,:N_mesh[7]]/x, color=colors[j])
+    t.set_label("n="+str(2*j)+"; l=0")
 ax.legend()
 plt.xlabel("Position")
 plt.ylabel("Wavefunction amplitude")
@@ -168,9 +170,10 @@ x= (np.array(range(N)))*h + h
 plt.figure()
 ax = plt.gca()
 ax.grid(True)
+colors=["#21b2b4ff", "#0055ffff", "#00007fff"]
 for j in range(3): #loop on the energies
-    t,= plt.plot(x, y_eig_1[7,j,:N_mesh[7]]/x)
-    t.set_label("l=1; n="+str(1+2*j))
+    t,= plt.plot(x, y_eig_1[7,j,:N_mesh[7]]/x, color=colors[j])
+    t.set_label("n="+str(2*j+1)+"; l=1")
 ax.legend()
 plt.xlabel("Position")
 plt.ylabel("Wavefunction amplitude")
@@ -183,9 +186,10 @@ x= (np.array(range(N)))*h + h
 plt.figure()
 ax = plt.gca()
 ax.grid(True)
+colors=["#ff5500ff", "#ff0000", "#aa0000ff"]
 for j in range(3): #loop on the energies
-    t,= plt.plot(x, y_eig_2[7,j,:N_mesh[7]]/x)
-    t.set_label("l=2; n="+str(2+2*j))
+    t,= plt.plot(x, y_eig_2[7,j,:N_mesh[7]]/x, color=colors[j])
+    t.set_label("n="+str(2*(j+1))+"; l=2")
 ax.legend()
 plt.xlabel("Position")
 plt.ylabel("Wavefunction amplitude")
@@ -195,15 +199,15 @@ plt.show()
 plt.figure()
 ax = plt.gca()
 ax.grid(True)
-t, = plt.plot(2*np.array(range(3)), eig_0[7,:], marker = "*", markersize = 10)
-t.set_label("Eigenvalues for a mesh of $4\cdot 10^4$ points")
-t, = plt.plot(1+2*np.array(range(3)), eig_1[7,:], marker = "+", markersize = 10)
-t.set_label("Eigenvalues for a mesh of $4\cdot 10^4$ points")
-t, = plt.plot(2*np.array(range(3))+2, eig_2[7,:], marker = ".", markersize = 6)
-t.set_label("Eigenvalues for a mesh of $4\cdot 10^4$ points")
+t, = plt.plot(2*np.array(range(3)), eig_0[7,:], marker = "*", markersize = 10, color="#01bd17ff")
+t.set_label("Eigenvalues for l=0")
+t, = plt.plot(1+2*np.array(range(3)), eig_1[7,:], marker = "+", markersize = 10, color="#0055ffff")
+t.set_label("Eigenvalues for l=1")
+t, = plt.plot(2*np.array(range(3))+2, eig_2[7,:], marker = ".", markersize = 6, color="#ff0000")
+t.set_label("Eigenvalues for l=2")
 ax.legend()
 plt.xlabel("Quantum number n")
-plt.ylabel("Eigenvalue [UNITA]")
+plt.ylabel("Energy")
 plt.show()
 
 #%% plot the relative difference between the computed eigenfunction and the exact one
@@ -223,40 +227,53 @@ y_exact_2[2,:] = x**2*np.exp(-1/2*x**2)*sp.eval_genlaguerre(2,5/2,x**2)*np.sqrt(
 plt.figure()
 ax = plt.gca()
 ax.grid(True)
+#plot with l=0
+colors=["#58e201ff", "#01bd17ff", "#007a0e"]
 for j in range(3): #loop on the energies
-    t,= plt.semilogy(x, abs((y_eig_0[7,j,:N_mesh[7]]/x-y_exact_0[j,:])/y_exact_0[j,:]))#y_eig[6,j,:N_mesh[6]+1]-
-    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
-    t,= plt.semilogy(x, abs((y_eig_1[7,j,:N_mesh[7]]/x-y_exact_1[j,:])/y_exact_1[j,:]))#y_eig[6,j,:N_mesh[6]+1]-
-    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
-    t,= plt.semilogy(x, abs(((y_eig_2[7,j,:N_mesh[7]]/x-y_exact_2[j,:]))/y_exact_2[j,:]))#y_eig[6,j,:N_mesh[6]+1]-
-    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
+    t,= plt.semilogy(x, abs((y_eig_0[7,j,:N_mesh[7]]/x-y_exact_0[j,:])/y_exact_0[j,:]), color=colors[j])#y_eig[6,j,:N_mesh[6]+1]-
+    t.set_label("n="+str(2*j)+"; l=0")
+#plot with l=1
+colors=["#21b2b4ff", "#0055ffff", "#00007fff"]  
+for j in range(3): #loop on the energies
+    t,= plt.semilogy(x, abs((y_eig_1[7,j,:N_mesh[7]]/x-y_exact_1[j,:])/y_exact_1[j,:]), color=colors[j])#y_eig[6,j,:N_mesh[6]+1]-
+    t.set_label("n="+str(2*j+1)+"; l=1")
+#plot with l=2
+colors=["#ff5500ff", "#ff0000", "#aa0000ff"]
+for j in range(3): #loop on the energies
+    t,= plt.semilogy(x, abs(((y_eig_2[7,j,:N_mesh[7]]/x-y_exact_2[j,:]))/y_exact_2[j,:]), color=colors[j])#y_eig[6,j,:N_mesh[6]+1]-
+    t.set_label("n="+str(2*(j+1))+"; l=2")
     ax.legend()
-plt.xlabel("Position UNITA NATURALI")
-plt.ylabel("Wavefunction amplitude RADICE(1/UNITA NATURALI)")
+plt.xlabel("Position")
+plt.ylabel("Wavefunction amplitude")
 plt.show()
 
 #%% plot the difference between the computed eigenfunction and the exact one
 plt.figure()
 ax = plt.gca()
 ax.grid(True)
+#plot with l=0
+colors=["#58e201ff", "#01bd17ff", "#007a0e"]
 for j in range(3): #loop on the energies
-    t,= plt.semilogy(x, abs((y_eig_0[7,j,:N_mesh[7]]/x-y_exact_0[j,:])))#y_eig[6,j,:N_mesh[6]+1]-
-    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
-    t,= plt.semilogy(x, abs((y_eig_1[7,j,:N_mesh[7]]/x-y_exact_1[j,:])))#y_eig[6,j,:N_mesh[6]+1]-
-    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
-    t,= plt.semilogy(x, abs(((y_eig_2[7,j,:N_mesh[7]]/x-y_exact_2[j,:]))))#y_eig[6,j,:N_mesh[6]+1]-
-    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
+    t,= plt.semilogy(x, abs((y_eig_0[7,j,:N_mesh[7]]/x-y_exact_0[j,:])), color=colors[j])#y_eig[6,j,:N_mesh[6]+1]-
+    t.set_label("n="+str(2*j)+"; l=0")
+#plot with l=1
+colors=["#21b2b4ff", "#0055ffff", "#00007fff"]  
+for j in range(3): #loop on the energies
+    t,= plt.semilogy(x, abs((y_eig_1[7,j,:N_mesh[7]]/x-y_exact_1[j,:])), color=colors[j])#y_eig[6,j,:N_mesh[6]+1]-
+    t.set_label("n="+str(2*j+1)+"; l=1")
+#plot with l=2
+colors=["#ff5500ff", "#ff0000", "#aa0000ff"]
+for j in range(3): #loop on the energies
+    t,= plt.semilogy(x, abs(((y_eig_2[7,j,:N_mesh[7]]/x-y_exact_2[j,:]))), color=colors[j])#y_eig[6,j,:N_mesh[6]+1]-
+    t.set_label("n="+str(2*(j+1))+"; l=2")
     ax.legend()
-plt.xlabel("Position UNITA NATURALI")
-plt.ylabel("Wavefunction amplitude RADICE(1/UNITA NATURALI)")
+plt.xlabel("Position")
+plt.ylabel("Wavefunction amplitude")
 plt.show()
             
        
 
-            
-#%%
-plt.figure()
-t,= plt.semilogy(x, abs((y_exact_2[1,:])))
+
 
 
 
