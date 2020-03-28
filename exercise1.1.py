@@ -129,7 +129,7 @@ ax.set_xscale("Log")
 ax.set_yscale("Log")
 for i in range(eig.shape[1]):
     t, = plt.loglog(N_mesh, np.abs(eig[:,i]-(i+0.5))/(i+0.5), marker = ".", markersize = 6)
-    t.set_label("n="+str(i)+"; E="+str(2*i+1)+"/2")
+    t.set_label("n="+str(i))#+"; E="+str(2*i+1)+"/2"
 ax.legend()
 plt.errorbar(N_mesh, np.abs(eig[:,2]-(2+0.5))/(2+0.5), yerr=acc/2/(2+0.5)*np.ones(len(N_mesh)), fmt = "none", ecolor = "green")
 plt.xlabel("Number of point in the mesh")
@@ -147,8 +147,8 @@ for j in range(5): #loop on the energies
     t,= plt.plot(x, y_eig[6,j,:N_mesh[6]+1])
     t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
 ax.legend()
-plt.xlabel("Position UNITA NATURALI")
-plt.ylabel("Wavefunction amplitude RADICE(1/UNITA NATURALI)")
+plt.xlabel("Position")
+plt.ylabel("Wavefunction amplitude")
 plt.show()
 
 #Plot of the eigenvalue with N = N_mesh[6] = 10^4
@@ -156,10 +156,10 @@ plt.figure()
 ax = plt.gca()
 ax.grid(True)
 t, = plt.plot(range(5), eig[6,:], marker = ".", markersize = 6)
-t.set_label("Eigenvalues for a mesh of $10^4$ points")
+t.set_label("Eigenvalues")
 ax.legend()
 plt.xlabel("Quantum number n")
-plt.ylabel("Eigenvalue [UNITA]")
+plt.ylabel("Energy")
 plt.show()
 
 #plot the difference between the computed eigenfunction and the exact one
@@ -175,10 +175,10 @@ ax = plt.gca()
 ax.grid(True)
 for j in range(5): #loop on the energies
     t,= plt.semilogy(x, abs(y_eig[6,j,:N_mesh[6]+1]-y_exact[j,:]))#y_eig[6,j,:N_mesh[6]+1]-
-    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
+    t.set_label("n="+str(j))
 ax.legend()
-plt.xlabel("Position UNITA NATURALI")
-plt.ylabel("Wavefunction amplitude RADICE(1/UNITA NATURALI)")
+plt.xlabel("Position")
+plt.ylabel("Wavefunction amplitude")
 plt.show()
 
 #plot the relative difference between the computed eigenfunction and the exact one
@@ -187,10 +187,10 @@ ax = plt.gca()
 ax.grid(True)
 for j in range(5): #loop on the energies
     t,= plt.semilogy(x, abs((y_eig[6,j,:N_mesh[6]+1]-y_exact[j,:])/y_exact[j,:]))
-    t.set_label("n="+str(j)+"; E="+str(2*j+1)+"/2")
+    t.set_label("n="+str(j))
 ax.legend()
-plt.xlabel("Position UNITA NATURALI")
-plt.ylabel("Wavefunction amplitude RADICE(1/UNITA NATURALI)")
+plt.xlabel("Position")
+plt.ylabel("Wavefunction amplitude")
 plt.show()
             
        
