@@ -12,12 +12,12 @@ pi = np.arctan(1)*4                             # definition of pi
 epsilon = 1.0                                   # potential parameter energy
 sigma = 1.0                                     # potential parameter radius
 E = 0.3*epsilon                                 # energy
-N_E = 1                                      # number of energy steps
-h_E = 1.65*epsilon/(N_E)                        # energy step (to get just a bit below E_max = 5.9 meV)
+N_E = 1000                                      # number of energy steps
+h_E = 0.65*epsilon/(N_E)                        # energy step (to get just a bit below E_max = 5.9 meV)
 E_range = (np.array(range(N_E))+1)*h_E          # array with energy values
 crossect_range = np.zeros(N_E)                  # initialize a vector where we write the cross sections
 h = 0.001                                       # step
-r_low = sigma*0.7                             # lowest mesh point
+r_low = sigma*0.4                               # lowest mesh point
 r1_ix = int(sigma*6/h)                          # index in position array of r1 > r_max
 r2_ix = int(sigma*7/h)                          # index in position array of r2 > r_max
 N = int(sigma*7.5/h)                            # number of steps (just a bit more than those needed for r=sigma*7)
