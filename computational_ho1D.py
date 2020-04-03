@@ -1,15 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+<<<<<<< Updated upstream
 
 h=0.001 #step 
 N =10**4 # number of steps
+=======
+#%% Definition of fundamental parameters
+h=0.01 #step 
+N = int(1.4*10**3) # number of steps
+>>>>>>> Stashed changes
 x= (np.array(range(N))-N/2)*h  #define the mesh
 
-E_max = 7 #maximum energy
+E_max = 5 #maximum energy
 E_step= 0.09 #step in energy
 E=0 #starting energy
-acc = 0.001 # accuracy in energy
+acc = 0.00001 # accuracy in energy
 
 eig = 0. #initialize a vector where we write the eigenvalues
 y_eig = np.zeros([N,1]) #initialize a vector where we write the eigenfunctions
@@ -22,10 +28,10 @@ def K2(energy,position,spin): #functions that define the k^2 parameter in numero
         return 2*energy-position**2 - 2*spin*(spin+1)/position
 def numerov(energy,spin,position,step): #numerov algorithm, give as output a vector
     y_p = np.ones(len(x))
-    K2_E = K2(energy,position,0) #evaluate the k^2 parameter   
+    K2_E = K2(energy,position,spin) #evaluate the k^2 parameter   
     i=2
     y_p[0] =0 #initial point, at infinity y=0
-    y_p[1] = 1 #second point, correct derivative to be set with normalization
+    y_p[1] = 1/100 #second point, correct derivative to be set with normalization
     while i<N:
         y_p[i]= (2*y_p[i-1]*(1-5/12*step**2 *K2_E[i-1])-y_p[i-2]*(1+step**2 /12*K2_E[i-2]))/(1+step**2/12*K2_E[i])
         i += 1 
