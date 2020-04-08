@@ -20,7 +20,7 @@ def calculate_H(alpha):     #to calculate the matrix H_ij
     H = np.zeros((n,n))
     for i in range(n):
         for j in range(n):
-            H[i,j] = - (5*pi**(3/2)*alpha[i]*alpha[j])/(2*(alpha[i]+alpha[j])**(7/2)) - (2*pi)/(3*(alpha[i]+alpha[j])**2)
+            H[i,j] =  (5*pi**(3/2)*alpha[i]*alpha[j])/(2*(alpha[i]+alpha[j])**(7/2)) - (2*pi)/(3*(alpha[i]+alpha[j])**2)
     return H
 
 def calculate_S(alpha):
@@ -51,8 +51,8 @@ def generalized_eig(alpha, only_eig = 1):
 
 #%% Three p-waves only case
 #automatic minimization
-alpha = np.array([0.33, 0.079, 0.024])        #initial alpha
-sol3D = minimize(generalized_eig, alpha, bounds = ((0.001,None), (0.001, None), (0.001, None)) )
+alpha1 = np.array([0.002, 0.1, 0.0021])        #initial alpha
+sol3D = minimize(generalized_eig, alpha1, bounds = ((0.001,10), (0.001, 10), (0.001, 10)) )
 
 #plot of solution
 alpha3D = sol3D.x
