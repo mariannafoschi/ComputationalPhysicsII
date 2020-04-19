@@ -6,68 +6,190 @@ from scipy import linalg
 from scipy.optimize import minimize
 from matplotlib import cm
 import matplotlib.colors as colors
+import time
 
-#%% general definitions
-pi = np.arctan(1)*4
-
+start = time.time()
+print("hello")
+end = time.time()
+print(end - start)
 #%% Implementation of finite difference method
 
 #Defining range and number of steps
 
 r_max = 5
-N = 1000
+N = 700
 h = r_max/N
 
 #mash
-r = np.array(range(N))*h
+r = np.array(range(N))*h+h
 
-#check with gaussian
-
-#potential
-V = 0.5 * r**2
-#diag term
-U = V[1:N-1] + np.ones(N-2)/h**2
-
-#matrix
-A = np.diagflat(-0.5*np.ones(N-3)/h**2,1) +np.diagflat(-0.5*np.ones(N-3)/h**2,-1) +np.diagflat(U)
-
-eigenvalues,eigenvectors= np.linalg.eigh(A)
-
-mu = eigenvalues[0]
-phi = np.concatenate((np.array(0.), eigenvectors[:,0] ,np.array(0.)))
-
-print(phi)
-#plt.plot(r[1:N-1],-phi/r[1:N-1] )
-#plt.plot(r[1:N-1],-np.exp(-r[1:N-1]*r[1:N-1]/2)*phi[0]/r[1])
+V = 0.5* r**2
 
 #%% Prototype of the function
 
-def solve_GP(phi_0, r, potential, algorithm ):
+def numerov(energy,potential,r): 
     
+    phi = np.ones(len(r))
+    step = r[1]-r[0]
+    K2 = 2*energy-2*potential #evaluate the k^2 parameter   
+    i=2
+    phi[0] =step #initial point, at infinity y=0
+    phi[1] =2*step #second point, correct derivative to be set with normalization
+    while i<len(r):
+        phi[i]= (2*phi[i-1]*(1-5/12*step**2 *K2[i-1])-phi[i-2]*(1+step**2 /12*K2[i-2]))/(1+step**2/12*K2[i])
+        i += 1 
+    
+    return phi
+
+def solve_GP(potential, r, algorithm ):
+    #input: -potential: starts from r=step
+    #       -r: is the mesh of length N and should starts starts from step
+    #       -algotithm: can be 'numerov' or 'fd_method'
+    #output:-eigenvalue: ground state eigenvalue
+    #       -wavefunction: ground state radial wavefunction normalized to 1, length of the input mesh r 
+    #performance: finite difference method works faster for mash with less than ~300 points
+    
+    #some useful quantuty
+
+    step = r[1]-r[0]
+    N= len(r)
+    #for big mesh the finite difference method is really slow
+    if len(r)>20000:
+        algorithm ='numerov'
+        
+    #solution using numerov
     if algorithm == 'numerov':
-        phi=phi_0
-        mu = 0
+    
+        #initialize eigenenergy mu 
+        mu = 0;
+        mu_step = 0.1;
         
+        #to check if you find the ground state
+        check = 0
+        
+        #zeroth step 
+        phi=numerov(mu,potential,r)
+        control_0= np.sign(phi[N-1])
+        
+        #look for the groun state
+        while check==0:
+            #increase energy
+            mu = mu+mu_step
+            phi=numerov(mu,potential,r)
+            
+            #check the divergence
+            control_1 = np.sign(phi[N-1])
+            
+            #did the function cross 0 while increaseing the energy? 
+            if control_0 != control_1:
+                #you found the ground state                       
+                check=1
+                
+                #initialize variables for tangent method
+                mu_0 = mu-mu_step 
+                phi_0 = numerov(mu_0,potential,r)
+                mu_1 = mu
+                phi_1 = phi
+                delta = 1;
+                acc = 10**-5
+                
+                #tangent method
+                while delta > acc:
+                
+                    mu_2 = mu_0 - phi_0[N-1]*(mu_1-mu_0)/(phi_1[N-1]-phi_0[N-1])
+                    phi_2 = numerov(mu_2,potential,r)
+                
+                    control_2 = np.sign(phi_2[N-1])
+                
+                    if control_2 == control_1:
+                        mu_1 = mu_2;
+                        phi_1=phi_2
+                        delta = mu_1-mu_0
+                    else:
+                        mu_0 = mu_2
+                        phi_0 =phi_2
+                        delta = mu_1-mu_0
+                        
+                #write down the correct ground state
+                mu = mu_2               
+                phi = phi_2
+                norm = (np.dot(phi[1:(N-1)],phi[1:(N-1)]) + (phi[0]**2 +phi[N-1]**2)/2)*h
+                phi= phi/np.sqrt(norm)
+            
+            #Didn't find the ground state?
+            else:    
+                control_0 = control_1
+            #Repeat
+        
+
+        #return the ground state
         return mu, phi 
-        
+   
+    #finite difference method     
     if algorithm== 'fd_method':
         ## WARNING with N>1000 ci mette troppo
-        #step
-        h=r[1]-r[0]
-        N= np.len(r)
         
+        U = potential[0:N-1] + np.ones(N-1)/h**2
         #matrix definition
-        A = np.diagflat(-0.5*np.ones(N-3)/h**2,1) +np.diagflat(-0.5*np.ones(N-3)/h**2,-1) +np.diagflat(potential[1:N-1])
+        A = np.diagflat(-0.5*np.ones(N-2)/h**2,1) +np.diagflat(-0.5*np.ones(N-2)/h**2,-1) +np.diagflat(U[0:N-1])
         
-        #solve eigenvalue problem
-        
+        #solve eigenvalue problem        
         eigenvalues,eigenvectors= np.linalg.eigh(A)
-
-        mu = eigenvalues[0]
-        phi = np.array([0, eigenvectors[:,0] ,0])
         
-        #returns mu and phi defined on the input mesh
+        #write down the correct ground state
+        mu = eigenvalues[0]
+        phi = np.append(eigenvectors[:,0] ,[0])
+        norm = (np.dot(phi[1:(N-1)],phi[1:(N-1)]) + (phi[0]**2 +phi[N-1]**2)/2)*h
+        phi= -phi/np.sqrt(norm)
+        #returns the ground state
         return mu, phi
-     
+#%% Measuring efficiency
+n = [100,200,300,450,600,750,900,1000]
+timing_numerov = np.zeros(len(n))
+timing_fd = np.zeros(len(n))
+acc_numerov = np.zeros(len(n))
+acc_fd = np.zeros(len(n))
+#Numerov
+for i in range(len(n)):
+    r_max = 5
+    N = n[i]
+    h = r_max/N
+    #mash
+    r = np.array(range(N))*h+h
+    V = 0.5* r**2
+    start = time.time()
+    for j in range(100 ):
+        mu,phi = solve_GP(V,r,'numerov')
+    end = time.time()
+    acc_numerov[i]= np.abs(1.5-mu)
+    timing_numerov[i]=(end-start)/100
     
-    
+for i in range(len(n)):
+    r_max = 5
+    N = n[i]
+    h = r_max/N
+    #mash
+    r = np.array(range(N))*h+h
+    V = 0.5* r**2
+    start = time.time()
+    for j in range(100):
+        mu,phi = solve_GP(V,r,'fd_method')
+    end = time.time()
+    acc_fd[i]= np.abs(1.5-mu)
+    timing_fd[i]=(end-start)/100
+#%%    
+plt.plot(n,timing_numerov,label='numerov')
+plt.plot(n,timing_fd,label='finite difference')
+ax = plt.gca()
+ax.legend()
+plt.ylabel('time for 1 execution [s]')
+plt.xlabel('numer of points in the mesh')
+plt.show()
+
+plt.loglog(n,acc_numerov,label='numerov')
+plt.loglog(n,acc_fd,label='finite difference')
+ax = plt.gca()
+ax.legend()
+plt.ylabel('error on the harmonic oscillator ground state energy')
+plt.xlabel('numer of points in the mesh')
+plt.show()
