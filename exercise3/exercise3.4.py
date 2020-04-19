@@ -131,20 +131,25 @@ def solve_GP(potential, r, algorithm ):
         
         U = potential[0:N-1] + np.ones(N-1)/h**2
         #matrix definition
-        A = np.diagflat(-0.5*np.ones(N-2)/h**2,1) +np.diagflat(-0.5*np.ones(N-2)/h**2,-1) +np.diagflat(U[0:N-1])
+        #A = np.diagflat(-0.5*np.ones(N-2)/h**2,1) +np.diagflat(-0.5*np.ones(N-2)/h**2,-1) +np.diagflat(U[0:N-1])
         
         #solve eigenvalue problem        
-        eigenvalues,eigenvectors= np.linalg.eigh(A)
+        eigenvalues,eigenvectors=linalg.eigh_tridiagonal(U,-0.5*np.ones(N-2)/h**2)
         
         #write down the correct ground state
         mu = eigenvalues[0]
         phi = np.append(eigenvectors[:,0] ,[0])
         norm = (np.dot(phi[1:(N-1)],phi[1:(N-1)]) + (phi[0]**2 +phi[N-1]**2)/2)*h
         phi= -phi/np.sqrt(norm)
+        #phi =np.ones(N)
         #returns the ground state
         return mu, phi
+    
+    
+mu,phi = solve_GP(V,r,'fd_method')   
+print(mu)
 #%% Measuring efficiency
-n = [100,200,300,450,600,750,900,1000]
+n = [100,300,600,750,1000,1500,2000]
 timing_numerov = np.zeros(len(n))
 timing_fd = np.zeros(len(n))
 acc_numerov = np.zeros(len(n))
@@ -158,11 +163,11 @@ for i in range(len(n)):
     r = np.array(range(N))*h+h
     V = 0.5* r**2
     start = time.time()
-    for j in range(100 ):
+    for j in range(30):
         mu,phi = solve_GP(V,r,'numerov')
     end = time.time()
     acc_numerov[i]= np.abs(1.5-mu)
-    timing_numerov[i]=(end-start)/100
+    timing_numerov[i]=(end-start)/30
     
 for i in range(len(n)):
     r_max = 5
@@ -172,14 +177,14 @@ for i in range(len(n)):
     r = np.array(range(N))*h+h
     V = 0.5* r**2
     start = time.time()
-    for j in range(100):
+    for j in range(30):
         mu,phi = solve_GP(V,r,'fd_method')
     end = time.time()
     acc_fd[i]= np.abs(1.5-mu)
-    timing_fd[i]=(end-start)/100
+    timing_fd[i]=(end-start)/30
 #%%    
-plt.plot(n,timing_numerov,label='numerov')
-plt.plot(n,timing_fd,label='finite difference')
+plt.loglog(n,timing_numerov,label='numerov')
+plt.loglog(n,timing_fd,label='finite difference')
 ax = plt.gca()
 ax.legend()
 plt.ylabel('time for 1 execution [s]')
