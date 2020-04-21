@@ -1,31 +1,32 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr 20 14:37:09 2020
+
+@author: Davide
+"""
+
 
 #%% IMPORT PACKAGES
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import linalg
+import scipy.special as sp
 from scipy.optimize import minimize
 from matplotlib import cm
 import matplotlib.colors as colors
 import time
 
-start = time.time()
-print("hello")
-end = time.time()
-print(end - start)
-#%% Implementation of finite difference method
+#start = time.time()
+#print("hello")
+#end = time.time()
+#print(end - start)
 
-#Defining range and number of steps
+# =============================================================================
+# UNITS: the energy is expressed in hbar*omega, while a is expressed in terms of a_HO
+# =============================================================================
 
-r_max = 5
-N = 700
-h = r_max/N
 
-#mash
-r = np.array(range(N))*h+h
-
-V = 0.5* r**2
-
-#%% Prototype of the function
+#%% Define the functions
 
 def numerov(energy,potential,r): 
     
@@ -54,7 +55,7 @@ def solve_GP(potential, r, algorithm ):
     step = r[1]-r[0]
     N= len(r)
     #for big mesh the finite difference method is really slow
-    if len(r)>20000:
+    if len(r)>1000:
         algorithm ='numerov'
         
     #solution using numerov
@@ -145,58 +146,81 @@ def solve_GP(potential, r, algorithm ):
         #returns the ground state
         return mu, phi
     
-    
-mu,phi = solve_GP(V,r,'fd_method')   
-print(mu)
-#%% Measuring efficiency
-n = [100,300,600,750,1000,1500,2000]
-timing_numerov = np.zeros(len(n))
-timing_fd = np.zeros(len(n))
-acc_numerov = np.zeros(len(n))
-acc_fd = np.zeros(len(n))
-#Numerov
-for i in range(len(n)):
-    r_max = 5
-    N = n[i]
-    h = r_max/N
-    #mash
-    r = np.array(range(N))*h+h
-    V = 0.5* r**2
-    start = time.time()
-    for j in range(30):
-        mu,phi = solve_GP(V,r,'numerov')
-    end = time.time()
-    acc_numerov[i]= np.abs(1.5-mu)
-    timing_numerov[i]=(end-start)/30
-    
-for i in range(len(n)):
-    r_max = 5
-    N = n[i]
-    h = r_max/N
-    #mash
-    r = np.array(range(N))*h+h
-    V = 0.5* r**2
-    start = time.time()
-    for j in range(30):
-        mu,phi = solve_GP(V,r,'fd_method')
-    end = time.time()
-    acc_fd[i]= np.abs(1.5-mu)
-    timing_fd[i]=(end-start)/30
 
-#%%    
-plt.loglog(n,timing_numerov,label='numerov')
-plt.loglog(n,timing_fd,label='finite difference')
-ax = plt.gca()
-ax.legend()
-plt.ylabel('time for 1 execution [s]')
-plt.xlabel('numer of points in the mesh')
-plt.show()
 
+def calc_energy(r, phi, Nparticle, a):
+    step = r[1]-r[0]
+    N= len(r)
+    
+    #cinetic energy (PICCOLO ERRORE PERCHè HO 2 PUNTI IN MENO, SPECIALMENTE QUELLO IN ZERO. DISCUTERE)
+    der2_phi = (phi[2:N]-2*phi[1:N-1] + phi[0:N-2])/(step**2) #error of O(step^2)
+    energy_cin = - Nparticle/2 * (np.dot(phi[2:(N-2)],der2_phi[1:(N-3)]) + (phi[1]*der2_phi[0] +phi[N-2]*der2_phi[N-3])/2)*step
+    
+    #external potential energy
+    energy_ext = Nparticle/2 * (np.dot(phi[1:(N-1)]*r[1:(N-1)],phi[1:(N-1)]*r[1:(N-1)]) + ((phi[0]*r[0])**2 + (phi[N-1]*r[N-1])**2)/2)*step
+    
+    #interaction potenetia energy
+    energy_int = Nparticle*(Nparticle - 1)/2*a * (np.dot(phi[1:(N-1)]**2/r[1:(N-1)],phi[1:(N-1)]**2/r[1:(N-1)]) + ((phi[0]**2/r[0])**2 + (phi[N-1]**2/r[N-1])**2)/2)*step
+    
+    return (energy_cin+energy_ext+energy_int)/Nparticle, energy_int/Nparticle
+
+
+
+#%% main
+# definition of main variables
+Np = 1000  #number of particles
+r_max = 7
+N = 1000
+h = r_max/N
+factor = 1 # this is N_particles * a
+a = factor/Np
+alpha_mix = 1
+
+#mash
+r = np.array(range(N))*h+h
+
+#initial potential guess
+Vext = 0.5 * r**2
+phi_guess = r * np.exp(-1/2*r**2)*sp.eval_genlaguerre(0,1/2,r**2)*np.sqrt( 1/np.sqrt(4*np.pi)*2**(3) )
+Vint = factor*phi_guess**2/(r**2)
+V = Vext + Vint
+
+#self consistency
+error = 10**(-4)
+mu_final, phi_final = solve_GP(V,r,'fd_method')  
+energy, energy_int = calc_energy(r, phi_final, Np, a)
+difference = energy - (mu_final -energy_int)
+energy_archive = np.array([energy]) #array for saving energy at all steps
+print(difference)
+
+while abs(difference) > error:
+    Vint = factor*phi_final**2/(r**2)
+    V = alpha_mix*(Vext + Vint)-(1-alpha_mix)*V
+    mu_final, phi_final = solve_GP(V,r,'fd_method')
+    energy, energy_int = calc_energy(r, phi_final, Np, a)
+    difference = (energy - (mu_final -energy_int))/energy
+    energy_archive = np.append(energy_archive, energy)
+    print(difference)
+
+print(mu_final)
+
+
+#plot potentials
+Vint = factor*phi_final**2/(r**2)
+V = Vext + Vint
 plt.figure()
-plt.loglog(n,acc_numerov,label='numerov')
-plt.loglog(n,acc_fd,label='finite difference')
-ax = plt.gca()
-ax.legend()
-plt.ylabel('error on the harmonic oscillator ground state energy')
-plt.xlabel('numer of points in the mesh')
-plt.show()
+plt.plot(r, Vext, label="Harmonic potential")
+plt.plot(r, Vint, label = "Mean field potential")
+plt.plot(r,V, label="Total potential")
+plt.legend()
+plt.grid(True)
+
+#plot convergence of energy
+plt.figure()
+plt.semilogy(np.arange(len(energy_archive))+1,abs(energy_archive-energy_archive[-1]), label="Energy of single particle")
+plt.legend()
+plt.grid(True)
+
+
+
+
