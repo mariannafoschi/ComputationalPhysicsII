@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Wed Apr 22 12:40:36 2020
+
+@author: Davide
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Mon Apr 20 14:37:09 2020
 
 @author: Davide
@@ -169,44 +176,33 @@ def calc_energy(r, phi, Na):
 #%% main
 # definition of main variables
 r_max = 7
-N = 700
+N = 1000
 h = r_max/N
 Na = 1 # this is N_particles * a
-alpha_mix = 0.1
+Nmix = 10
+alpha_mix = np.arange(Nmix)/Nmix + 1/Nmix
+# variables where to store the energy and solutions after 1 iteration
+energy_archive = np.zeros(Nmix)
+phi_archive = np.zeros((Nmix, N))
 
 #mash
 r = np.array(range(N))*h+h
 
-#initial potential guess
-Vext = 0.5 * r**2
-phi_guess = r * np.exp(-1/2*r**2)*sp.eval_genlaguerre(0,1/2,r**2)*np.sqrt( 1/np.sqrt(4*np.pi)*2**(3) )
-Vint = alpha_mix*Na*phi_guess**2/(r**2)
-V = Vext + Vint
-
-#self consistency
-error = 10**(-4)
-mu_final, phi_final = solve_GP(V,r,'fd_method')  
-energy, energy_int = calc_energy(r, phi_final, Na)
-difference = (energy - (mu_final -energy_int))/energy
-energy_archive = np.array([energy]) #array for saving energy at all steps
-print(difference)
-
-while abs(difference) > error:
-    Vint = alpha_mix*Na*phi_final**2/(r**2) - (1-alpha_mix)*(V-Vext)
-    V = Vext + Vint
-    mu_final, phi_final = solve_GP(V,r,'fd_method')
+for i in range(Nmix):
+    #initial potential guess
+    Vext = 0.5 * r**2
+    phi_guess = r * np.exp(-1/2*r**2)*np.sqrt( 1/np.sqrt(4*np.pi)*2**(3) )
+    Vint = alpha_mix[i]*Na*phi_guess**2/(r**2)
+    V0 = Vext + Vint
+    
+    #first iteration
+    mu_final, phi_final = solve_GP(V0,r,'numerov')  
     energy, energy_int = calc_energy(r, phi_final, Na)
-    difference = (energy - (mu_final -energy_int))/energy
-    energy_archive = np.append(energy_archive, energy)
-    print(difference)
-    print(mu_final)
-
-print(mu_final)
+    energy_archive[i] = energy
+    phi_archive[i,:] = phi_final
 
 
 #plot potentials
-Vint = Na*phi_final**2/(r**2)
-V = Vext + Vint
 plt.figure()
 plt.plot(r, Vext, label="Harmonic potential")
 plt.plot(r, Vint, label = "Mean field potential")
@@ -219,6 +215,8 @@ plt.figure()
 plt.semilogy(np.arange(len(energy_archive))+1,abs(energy_archive-energy_archive[-1]), label="Energy of single particle")
 plt.legend()
 plt.grid(True)
+
+
 
 
 
