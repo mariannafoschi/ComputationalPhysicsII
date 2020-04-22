@@ -152,9 +152,11 @@ def calc_energy(r, phi, Na):
     step = r[1]-r[0]
     N= len(r)
     
-    #cinetic energy (PICCOLO ERRORE PERCHè HO 2 PUNTI IN MENO, SPECIALMENTE QUELLO IN ZERO. DISCUTERE)
-    der2_phi = (phi[2:N]-2*phi[1:N-1] + phi[0:N-2])/(step**2) #error of O(step^2)
-    energy_cin = - 1/2 * (np.dot(phi[2:(N-2)],der2_phi[1:(N-3)]) + (phi[1]*der2_phi[0] +phi[N-2]*der2_phi[N-3])/2)*step
+    norm = (np.dot(phi[1:(N-1)],phi[1:(N-1)]) + (phi[0]**2 +phi[N-1]**2)/2)*h
+    
+    #cinetic energy
+    der2_phi = (phi[2:N]-2*phi[1:N-1] + phi[0:N-2])/(step**2) #error of O(step) because non centered derivative
+    energy_cin = - 1/2 * (np.dot(phi[1:(N-3)],der2_phi[1:(N-3)]) + (phi[0]*der2_phi[0] +phi[N-3]*der2_phi[N-3])/2)*step
     
     #external potential energy
     energy_ext = 1/2 * (np.dot(phi[1:(N-1)]*r[1:(N-1)],phi[1:(N-1)]*r[1:(N-1)]) + ((phi[0]*r[0])**2 + (phi[N-1]*r[N-1])**2)/2)*step
@@ -162,7 +164,7 @@ def calc_energy(r, phi, Na):
     #interaction potenetia energy
     energy_int = Na/2 * (np.dot(phi[1:(N-1)]**2/r[1:(N-1)],phi[1:(N-1)]**2/r[1:(N-1)]) + ((phi[0]**2/r[0])**2 + (phi[N-1]**2/r[N-1])**2)/2)*step
     
-    return (energy_cin+energy_ext+energy_int), energy_int
+    return (energy_cin + energy_ext + energy_int), energy_int
 
 
 
@@ -172,40 +174,47 @@ r_max = 7
 N = 700
 h = r_max/N
 Na = 1 # this is N_particles * a
-alpha_mix = 0.1
+alpha_mix = 0.01
 
 #mash
 r = np.array(range(N))*h+h
 
 #initial potential guess
 Vext = 0.5 * r**2
-phi_guess = r * np.exp(-1/2*r**2)*sp.eval_genlaguerre(0,1/2,r**2)*np.sqrt( 1/np.sqrt(4*np.pi)*2**(3) )
-Vint = alpha_mix*Na*phi_guess**2/(r**2)
+phi_guess = np.exp(-1/2*r**2)*np.sqrt( 2**3/np.sqrt(4*np.pi) ) #per evitare possibili errori qui non moltiplico per r
+Vint = alpha_mix*Na*phi_guess**2                                    #e qui non divido per r^2
 V = Vext + Vint
 
 #self consistency
 error = 10**(-4)
+cont = 0
 mu_final, phi_final = solve_GP(V,r,'fd_method')  
 energy, energy_int = calc_energy(r, phi_final, Na)
-difference = (energy - (mu_final -energy_int))/energy
+difference = (energy - (mu_final - energy_int))
 energy_archive = np.array([energy]) #array for saving energy at all steps
+#phi_archive = np.zeros((100, N))
+
 print(difference)
 
-while abs(difference) > error:
-    Vint = alpha_mix*Na*phi_final**2/(r**2) - (1-alpha_mix)*(V-Vext)
+while abs(difference) > error :
+    cont +=1
+    Vint = alpha_mix*Na*phi_final**2/(r**2) + (1-alpha_mix)*(V-Vext)
     V = Vext + Vint
     mu_final, phi_final = solve_GP(V,r,'fd_method')
     energy, energy_int = calc_energy(r, phi_final, Na)
-    difference = (energy - (mu_final -energy_int))/energy
+    difference = (energy - (mu_final - energy_int))
     energy_archive = np.append(energy_archive, energy)
+    #phi_archive[cont-1,:] = phi_final
     print(difference)
+    print("mu")
     print(mu_final)
+    print(cont)
 
 print(mu_final)
 
 
 #plot potentials
-Vint = Na*phi_final**2/(r**2)
+Vint = alpha_mix*Na*phi_final**2/(r**2) + (1-alpha_mix)*(V-Vext)
 V = Vext + Vint
 plt.figure()
 plt.plot(r, Vext, label="Harmonic potential")
@@ -220,6 +229,10 @@ plt.semilogy(np.arange(len(energy_archive))+1,abs(energy_archive-energy_archive[
 plt.legend()
 plt.grid(True)
 
+#%%
+#plt.figure()
+#for i in range(len(energy_archive)):
+#    plt.plot(r, phi_archive[i,:]/r)
 
 
 
