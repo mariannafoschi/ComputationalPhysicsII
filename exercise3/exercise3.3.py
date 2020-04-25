@@ -92,7 +92,12 @@ def solve_GP(potential, r, algorithm ):
                 acc = 10**-5
                 
                 #tangent method
-                while delta > acc:
+               
+                # to count the number of iterations of the tangent method
+                counter = 0
+                
+                while delta > acc and counter < 20:
+                    counter = counter + 1
                 
                     mu_2 = mu_0 - phi_0[N-1]*(mu_1-mu_0)/(phi_1[N-1]-phi_0[N-1])
                     phi_2 = numerov(mu_2,potential,r)
@@ -107,6 +112,22 @@ def solve_GP(potential, r, algorithm ):
                         mu_0 = mu_2
                         phi_0 =phi_2
                         delta = mu_1-mu_0
+                
+                # bisection method (if needed)
+                while delta > acc:
+                    mu_2 = (mu_0 + mu_1)/2
+                    phi_2 = numerov(mu_2,potential,r)
+                    
+                    control_2 = np.sign(phi_2[N-1])
+                    
+                    if control_2 == control_1:
+                        mu_1 = mu_2;
+                        phi_1=phi_2
+                        delta = mu_1-mu_0
+                    else:
+                        mu_0 = mu_2
+                        phi_0 =phi_2
+                        delta = mu_1-mu_0     
                         
                 #write down the correct ground state
                 mu = mu_2               
