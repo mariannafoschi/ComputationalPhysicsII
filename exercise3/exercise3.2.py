@@ -177,7 +177,7 @@ def calc_energy(r, phi, Na):
     N= len(r)
     
     #cinetic energy
-    der2_phi = (phi[2:N]-2*phi[1:N-1] + phi[0:N-2])/(step**2) #error of O(step) because non centered derivative
+    der2_phi = (45*phi[0:N-5] - 154*phi[1:N-4] + 214*phi[2:N-3] - 156*phi[3:N-2] + 61*phi[4:N-1] - 10*phi[5:N])/(12*step**2) #error of O(step) because non centered derivative
     energy_cin = - 1/2 * (np.dot(phi[1:(N-3)],der2_phi[1:(N-3)]) + (phi[0]*der2_phi[0] +phi[N-3]*der2_phi[N-3])/2)*step
     
     #external potential energy
