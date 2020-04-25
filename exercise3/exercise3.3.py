@@ -48,13 +48,15 @@ def solve_GP(potential, r, algorithm ):
     #       -algotithm: can be 'numerov' or 'fd_method'
     #output:-eigenvalue: ground state eigenvalue
     #       -wavefunction: ground state radial wavefunction normalized to 1, length of the input mesh r 
-    #performance: finite difference method works faster by almost a factor of 100    
+    #performance: finite difference method works faster for mash with less than ~300 points
+    
     #some useful quantuty
 
     step = r[1]-r[0]
-    h=step
     N= len(r)
-     
+    #for big mesh the finite difference method is really slow
+
+        
     #solution using numerov
     if algorithm == 'numerov':
     
@@ -151,9 +153,9 @@ def solve_GP(potential, r, algorithm ):
         U = potential[0:N-1] + np.ones(N-1)/h**2
         #matrix definition
         #A = np.diagflat(-0.5*np.ones(N-2)/h**2,1) +np.diagflat(-0.5*np.ones(N-2)/h**2,-1) +np.diagflat(U[0:N-1])
-
+        
         #solve eigenvalue problem        
-        eigenvalues,eigenvectors=linalg.eigh_tridiagonal(U,-0.5*np.ones(N-2)/h**2,select='i',select_range=(0,0))
+        eigenvalues,eigenvectors=linalg.eigh_tridiagonal(U,-0.5*np.ones(N-2)/h**2, select = "i", select_range = (0,0))
         
         #write down the correct ground state
         mu = eigenvalues[0]
@@ -171,8 +173,8 @@ def calc_energy(r, phi, Na):
     N= len(r)
     
     #cinetic energy
-    der2_phi = (phi[2:N]-2*phi[1:N-1] + phi[0:N-2])/(step**2) #error of O(step) because non centered derivative
-    energy_cin = - 1/2 * (np.dot(phi[1:(N-3)],der2_phi[1:(N-3)]) + (phi[0]*der2_phi[0] +phi[N-3]*der2_phi[N-3])/2)*step
+    der2_phi = (45*phi[0:N-5] - 154*phi[1:N-4] + 214*phi[2:N-3] - 156*phi[3:N-2] + 61*phi[4:N-1] - 10*phi[5:N])/(12*step**2) #error of O(step) because non centered derivative
+    energy_cin = - 1/2 * (np.dot(phi[1:(N-6)],der2_phi[1:(N-6)]) + (phi[0]*der2_phi[0] +phi[N-6]*der2_phi[N-6])/2)*step
     
     #external potential energy
     energy_ext = 1/2 * (np.dot(phi[1:(N-1)]*r[1:(N-1)],phi[1:(N-1)]*r[1:(N-1)]) + ((phi[0]*r[0])**2 + (phi[N-1]*r[N-1])**2)/2)*step
@@ -187,70 +189,84 @@ def calc_energy(r, phi, Na):
 #%% main
 # definition of main variables
 r_max = 7
-N = 700
+N = 1000
 h = r_max/N
-Na = 100 # this is N_particles * a
-alpha_mix = 0.01
+Na = [0.01, 0.1, 1, 10, 100] # this is N_particles * a
+Nmix = 100
+alpha_mix = np.arange(Nmix)/Nmix/100 + 0.09
 
 #mash
 r = np.array(range(N))*h+h
 
-#initial potential guess
+#self consistency constant parameters
 Vext = 0.5 * r**2
-phi_guess = np.exp(-1/2*r**2)*np.sqrt( 2**3/np.sqrt(4*np.pi) ) #per evitare possibili errori qui non moltiplico per r
-Vint = alpha_mix*Na*phi_guess**2                                    #e qui non divido per r^2
-V = Vext + Vint
-
-#self consistency
+phi_guess = r*np.exp(-1/2*r**2)*np.sqrt( 2**3/np.sqrt(4*np.pi) )
 error = 10**(-4)
-cont = 0
-mu_final, phi_final = solve_GP(V,r,'fd_method')  
-energy, energy_int = calc_energy(r, phi_final, Na)
-difference = (energy - (mu_final - energy_int))
-energy_archive = np.array([energy]) #array for saving energy at all steps
-#phi_archive = np.zeros((100, N))
+convergence = np.zeros((len(Na), len(alpha_mix)))
+end_energy = np.zeros((len(Na), len(alpha_mix)))
+end_phi = np.zeros((len(Na), len(alpha_mix), N))
 
-print(difference)
 
-while abs(difference) > error :
-    cont +=1
-    Vint = alpha_mix*Na*phi_final**2/(r**2) + (1-alpha_mix)*(V-Vext)
-    V = Vext + Vint
-    mu_final, phi_final = solve_GP(V,r,'fd_method')
-    energy, energy_int = calc_energy(r, phi_final, Na)
-    difference = (energy - (mu_final - energy_int))
-    energy_archive = np.append(energy_archive, energy)
-    #phi_archive[cont-1,:] = phi_final
-    print(difference)
-    print("mu")
-    print(mu_final)
-    print(cont)
+for i in range(len(Na)):
+    for j in range(len(alpha_mix)):
+        print(i,j)
+        #initial potential guess
+        Vint = alpha_mix[j]*Na[i]*(phi_guess/r)**2
+        V = Vext + Vint
 
-print(mu_final)
+        #self consistency first step
+        mu_final, phi_final = solve_GP(V,r,'fd_method')  
+        energy, energy_int = calc_energy(r, phi_final, Na[i])
+        difference = (energy - (mu_final - energy_int))
+        cont = 1
+        
+        while abs(difference) > error :
+            if cont > 10000:
+                difference = 0
+                cont = 0
+            else:                
+                Vint = alpha_mix[j]*Na[i]*phi_final**2/(r**2) + (1-alpha_mix[j])*(V-Vext)
+                V = Vext + Vint
+                mu_final, phi_final = solve_GP(V,r,'fd_method')
+                energy, energy_int = calc_energy(r, phi_final, Na[i])
+                difference = (energy - (mu_final - energy_int))
+                cont +=1
+                #phi_archive[cont-1,:] = phi_final
+    #            print(difference)
+    #            print("mu")
+    #            print(mu_final)
+    #            print(cont)
+        convergence[i,j] = cont
 
 #%%
-#plot potentials
-Vint = alpha_mix*Na*phi_final**2/(r**2) + (1-alpha_mix)*(V-Vext)
-V = Vext + Vint
 plt.figure()
-plt.plot(r, Vext, label="Harmonic potential")
-plt.plot(r, Vint, label = "Mean field potential")
-plt.plot(r,V, label="Total potential")
+for i in range(len(Na)):
+    plt.plot(alpha_mix, convergence[i,:], label = "Na = " + str(10**(i-2)))
 plt.legend()
-plt.grid(True)
-
-#plot wavefunctions
-plt.figure()
-plt.plot(r, phi_final, label = "Mean field potential")
-plt.plot(r,V, label="Total potential")
-plt.legend()
-plt.grid(True)
-
-#plot convergence of energy
-plt.figure()
-plt.semilogy(np.arange(len(energy_archive))+1,abs(energy_archive-energy_archive[-1]), label="Energy of single particle")
-plt.legend()
-plt.grid(True)
+plt.grid(True)     
+        
+##plot potentials
+#Vint = alpha_mix*Na*phi_final**2/(r**2) + (1-alpha_mix)*(V-Vext)
+#V = Vext + Vint
+#plt.figure()
+#plt.plot(r, Vext, label="Harmonic potential")
+#plt.plot(r, Vint, label = "Mean field potential")
+#plt.plot(r,V, label="Total potential")
+#plt.legend()
+#plt.grid(True)
+#
+##plot wavefunctions
+#plt.figure()
+#plt.plot(r, phi_final, label = "Mean field potential")
+#plt.plot(r,V, label="Total potential")
+#plt.legend()
+#plt.grid(True)
+#
+##plot convergence of energy
+#plt.figure()
+#plt.semilogy(np.arange(len(energy_archive))+1,abs(energy_archive-energy_archive[-1]), label="Energy of single particle")
+#plt.legend()
+#plt.grid(True)
 
 #%%
 #plt.figure()
