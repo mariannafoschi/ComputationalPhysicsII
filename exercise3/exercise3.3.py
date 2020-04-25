@@ -149,8 +149,6 @@ def calc_energy(r, phi, Na):
     step = r[1]-r[0]
     N= len(r)
     
-    norm = (np.dot(phi[1:(N-1)],phi[1:(N-1)]) + (phi[0]**2 +phi[N-1]**2)/2)*h
-    
     #cinetic energy
     der2_phi = (phi[2:N]-2*phi[1:N-1] + phi[0:N-2])/(step**2) #error of O(step) because non centered derivative
     energy_cin = - 1/2 * (np.dot(phi[1:(N-3)],der2_phi[1:(N-3)]) + (phi[0]*der2_phi[0] +phi[N-3]*der2_phi[N-3])/2)*step
@@ -170,7 +168,7 @@ def calc_energy(r, phi, Na):
 r_max = 7
 N = 700
 h = r_max/N
-Na = 1 # this is N_particles * a
+Na = 100 # this is N_particles * a
 alpha_mix = 0.01
 
 #mash
@@ -209,13 +207,20 @@ while abs(difference) > error :
 
 print(mu_final)
 
-
+#%%
 #plot potentials
 Vint = alpha_mix*Na*phi_final**2/(r**2) + (1-alpha_mix)*(V-Vext)
 V = Vext + Vint
 plt.figure()
 plt.plot(r, Vext, label="Harmonic potential")
 plt.plot(r, Vint, label = "Mean field potential")
+plt.plot(r,V, label="Total potential")
+plt.legend()
+plt.grid(True)
+
+#plot wavefunctions
+plt.figure()
+plt.plot(r, phi_final, label = "Mean field potential")
 plt.plot(r,V, label="Total potential")
 plt.legend()
 plt.grid(True)
