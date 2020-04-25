@@ -206,5 +206,5 @@ sol3D = minimize(generalized_eig_sym, alpha1, bounds = ((0.0001,None), (0.0001, 
 
 #plot of solution
 alpha3D = sol3D.x
-eig3D, C3D = generalized_eig(alpha3D, only_eig = 0)
+eig3D, C3D = generalized_eig_sym(alpha3D, only_eig = 0)
 
