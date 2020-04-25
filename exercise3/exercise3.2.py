@@ -174,7 +174,7 @@ def calc_energy(r, phi, Na):
 r_max = 7
 N = 700
 h = r_max/N
-Na = 1 # this is N_particles * a
+Na = 100 # this is N_particles * a
 Nmix = 10
 alpha_mix = np.arange(Nmix)/Nmix + 1/Nmix
 # variables where to store the energy and solutions after 1 iteration
