@@ -159,9 +159,9 @@ def calc_energy(r, phi, Na):
     step = r[1]-r[0]
     N= len(r)
     
-    #cinetic energy (PICCOLO ERRORE PERCHè HO 2 PUNTI IN MENO, SPECIALMENTE QUELLO IN ZERO. DISCUTERE)
-    der2_phi = (phi[2:N]-2*phi[1:N-1] + phi[0:N-2])/(step**2) #error of O(step^2)
-    energy_cin = - 1/2 * (np.dot(phi[2:(N-2)],der2_phi[1:(N-3)]) + (phi[1]*der2_phi[0] +phi[N-2]*der2_phi[N-3])/2)*step
+    #cinetic energy
+    der2_phi = (phi[2:N]-2*phi[1:N-1] + phi[0:N-2])/(step**2) #error of O(step) because non centered derivative
+    energy_cin = - 1/2 * (np.dot(phi[1:(N-3)],der2_phi[1:(N-3)]) + (phi[0]*der2_phi[0] +phi[N-3]*der2_phi[N-3])/2)*step
     
     #external potential energy
     energy_ext = 1/2 * (np.dot(phi[1:(N-1)]*r[1:(N-1)],phi[1:(N-1)]*r[1:(N-1)]) + ((phi[0]*r[0])**2 + (phi[N-1]*r[N-1])**2)/2)*step
@@ -169,14 +169,14 @@ def calc_energy(r, phi, Na):
     #interaction potenetia energy
     energy_int = Na/2 * (np.dot(phi[1:(N-1)]**2/r[1:(N-1)],phi[1:(N-1)]**2/r[1:(N-1)]) + ((phi[0]**2/r[0])**2 + (phi[N-1]**2/r[N-1])**2)/2)*step
     
-    return (energy_cin+energy_ext+energy_int), energy_int
+    return (energy_cin + energy_ext + energy_int), energy_int
 
 
 
 #%% main
 # definition of main variables
 r_max = 7
-N = 1000
+N = 700
 h = r_max/N
 Na = 1 # this is N_particles * a
 Nmix = 10
@@ -191,8 +191,8 @@ r = np.array(range(N))*h+h
 for i in range(Nmix):
     #initial potential guess
     Vext = 0.5 * r**2
-    phi_guess = r * np.exp(-1/2*r**2)*np.sqrt( 1/np.sqrt(4*np.pi)*2**(3) )
-    Vint = alpha_mix[i]*Na*phi_guess**2/(r**2)
+    phi_guess = np.exp(-1/2*r**2)*np.sqrt( 1/np.sqrt(4*np.pi)*2**(3) )
+    Vint = alpha_mix[i]*Na*phi_guess**2
     V0 = Vext + Vint
     
     #first iteration
@@ -204,9 +204,19 @@ for i in range(Nmix):
 
 #plot potentials
 plt.figure()
-plt.plot(r, Vext, label="Harmonic potential")
-plt.plot(r, Vint, label = "Mean field potential")
-plt.plot(r,V, label="Total potential")
+for i in range(Nmix):
+    plt.plot(r, phi_archive[i,:]/r, label="alpha_mix="+str((i+1)/Nmix))
+plt.plot(r,phi_guess, label="Non-interaction")
+plt.legend()
+plt.grid(True)
+
+#plot potentials
+plt.figure()
+for i in range(Nmix):
+    Vint = alpha_mix[i]*Na*phi_guess**2
+    V = Vext + Vint
+    plt.plot(r, V, label="alpha_mix="+str((i+1)/Nmix))
+plt.plot(r,Vext, label="Harmonic potential")
 plt.legend()
 plt.grid(True)
 
