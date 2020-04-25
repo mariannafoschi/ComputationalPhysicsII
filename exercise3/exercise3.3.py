@@ -55,8 +55,7 @@ def solve_GP(potential, r, algorithm ):
     step = r[1]-r[0]
     N= len(r)
     #for big mesh the finite difference method is really slow
-    if len(r)>1000:
-        algorithm ='numerov'
+
         
     #solution using numerov
     if algorithm == 'numerov':
@@ -135,7 +134,7 @@ def solve_GP(potential, r, algorithm ):
         #A = np.diagflat(-0.5*np.ones(N-2)/h**2,1) +np.diagflat(-0.5*np.ones(N-2)/h**2,-1) +np.diagflat(U[0:N-1])
         
         #solve eigenvalue problem        
-        eigenvalues,eigenvectors=linalg.eigh_tridiagonal(U,-0.5*np.ones(N-2)/h**2)
+        eigenvalues,eigenvectors=linalg.eigh_tridiagonal(U,-0.5*np.ones(N-2)/h**2, select = "i", select_range = (0,0))
         
         #write down the correct ground state
         mu = eigenvalues[0]
@@ -172,7 +171,7 @@ r_max = 7
 N = 700
 h = r_max/N
 Na = 100 # this is N_particles * a
-alpha_mix = 0.01
+alpha_mix = 0.1
 
 #mash
 r = np.array(range(N))*h+h
@@ -184,7 +183,7 @@ Vint = alpha_mix*Na*phi_guess**2                                    #e qui non d
 V = Vext + Vint
 
 #self consistency
-error = 10**(-4)
+error = 10**(-2)
 cont = 0
 mu_final, phi_final = solve_GP(V,r,'fd_method')  
 energy, energy_int = calc_energy(r, phi_final, Na)
