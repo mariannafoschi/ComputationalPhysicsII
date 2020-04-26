@@ -91,14 +91,14 @@ def solve_GP(potential, r, algorithm ):
                 mu_1 = mu
                 phi_1 = phi
                 delta = 1;
-                acc = 10**-5
+                acc = 10**-10
                 
                 #tangent method
                
                 # to count the number of iterations of the tangent method
                 counter = 0
                 
-                while delta > acc and counter < 20:
+                while delta > acc and counter < 25:
                     counter = counter + 1
                 
                     mu_2 = mu_0 - phi_0[N-1]*(mu_1-mu_0)/(phi_1[N-1]-phi_0[N-1])
@@ -117,6 +117,7 @@ def solve_GP(potential, r, algorithm ):
                 
                 # bisection method (if needed)
                 while delta > acc:
+                    
                     mu_2 = (mu_0 + mu_1)/2
                     phi_2 = numerov(mu_2,potential,r)
                     
@@ -191,9 +192,9 @@ def calc_energy(r, phi, Na):
 r_max = 7
 N = 1000
 h = r_max/N
-Na = [0.01, 0.1, 1, 10, 100] # this is N_particles * a
-Nmix = 100
-alpha_mix = np.arange(Nmix)/Nmix/100 + 0.09
+Na =[0.01,0.1,1,10,100] #[0.01, 0.1, 1, 10, 100] # this is N_particles * a
+Nmix = 30
+alpha_mix = 10**(np.arange(Nmix)/Nmix*2 -2)
 
 #mash
 r = np.array(range(N))*h+h
@@ -208,7 +209,9 @@ end_phi = np.zeros((len(Na), len(alpha_mix), N))
 
 
 for i in range(len(Na)):
+    diverg=0
     for j in range(len(alpha_mix)):
+        print('')
         print(i,j)
         #initial potential guess
         Vint = alpha_mix[j]*Na[i]*(phi_guess/r)**2
@@ -220,10 +223,12 @@ for i in range(len(Na)):
         difference = (energy - (mu_final - energy_int))
         cont = 1
         
-        while abs(difference) > error :
-            if cont > 10000:
-                difference = 0
-                cont = 0
+        while abs(difference) > error and diverg==0:
+            if cont > 2000:
+                if abs(difference)>0.1:
+                    diverg = 1
+                difference = 0 
+                
             else:                
                 Vint = alpha_mix[j]*Na[i]*phi_final**2/(r**2) + (1-alpha_mix[j])*(V-Vext)
                 V = Vext + Vint
@@ -232,31 +237,78 @@ for i in range(len(Na)):
                 difference = (energy - (mu_final - energy_int))
                 cont +=1
                 #phi_archive[cont-1,:] = phi_final
-    #            print(difference)
-    #            print("mu")
-    #            print(mu_final)
-    #            print(cont)
+                
+        if diverg==1:
+            cont=2000
+        end_energy[i,j]= energy
+        end_phi[i,j,:]=phi_final
         convergence[i,j] = cont
+        print('')
+        print(i,j)
+        print(mu_final)
+        print(cont)
+        
 
 #%%
+for i in range(30):
+    if convergence[4,i] ==0:
+        convergence[4,i]=200;
+
 plt.figure()
 for i in range(len(Na)):
-    plt.plot(alpha_mix, convergence[i,:], label = "Na = " + str(10**(i-2)))
+    plt.loglog(alpha_mix, convergence[i,:], color = [0,1-i/5,1],label = "Na = " + str(10**(i-2)))
 plt.legend()
+plt.xlabel('alpha')
+plt.ylabel('iteration')
 plt.grid(True)     
         
 ##plot potentials
-#Vint = alpha_mix*Na*phi_final**2/(r**2) + (1-alpha_mix)*(V-Vext)
-#V = Vext + Vint
-#plt.figure()
-#plt.plot(r, Vext, label="Harmonic potential")
-#plt.plot(r, Vint, label = "Mean field potential")
-#plt.plot(r,V, label="Total potential")
-#plt.legend()
-#plt.grid(True)
-#
+plt.figure()
+plt.semilogy(r, Vext, label="Harmonic potential",linestyle = '--',color = 'k')
+for i in range(len(Na)):
+    Vint = Na[i]*end_phi[i,0,:]**2/(r**2)
+    V = Vext + Vint   
+    
+    plt.semilogy(r, Vint,linestyle = '--',color =[0,1-i/5,1] )
+    plt.semilogy(r,V, label = 'Na ='+ str(10**(i-2)),color = [0,1-i/5,1])
+    plt.legend()
+    plt.xlabel('position')
+    plt.ylabel('energy')
+    plt.axis([-0.5,7,0.01,30])
+    plt.grid(True)
+#plot energies
+    
+plt.figure()
+plt.loglog(Na,end_energy[:,0]-1.5,label= 'gorund state energy corrections' ,color='b',marker='.',markersize='10',markeredgecolor='b')
+plt.legend()
+plt.xlabel('Na')
+plt.ylabel('energy')
+plt.axis([0.005,200,0.001,10])
+plt.grid(True)
+
 ##plot wavefunctions
-#plt.figure()
+plt.figure()
+plt.plot(r, (phi_guess/r)**2, label="non-interacting",color = 'k',linestyle ='--',linewidth= 4)
+for i in range(len(Na)):
+    
+    
+    plt.semilogy(r, (end_phi[i,0,:]/r)**2,color =[0,1-i/5,1],label = 'Na='+ str(10**(i-2)))
+ 
+    plt.legend()
+    plt.xlabel('position')
+    plt.ylabel('density')
+    plt.axis([-0.5,4,0.01,4])
+    plt.grid(True)
+    
+plt.figure()
+plt.loglog(Na,np.abs((end_phi[:,0,0]/r[0])**2-(phi_guess[0]/r[0])**2),label= 'central density corrections' ,color='b',marker='.',markersize='10',markeredgecolor='b')
+plt.loglog(Na,np.ones(len(Na))*(phi_guess[0]/r[0])**2,label= 'central density for non-interacting case' ,color='k',linestyle='--')
+plt.legend()
+plt.xlabel('Na')
+plt.ylabel('density')
+plt.axis([0.005,200,0.001,10])
+plt.grid(True)
+
 #plt.plot(r, phi_final, label = "Mean field potential")
 #plt.plot(r,V, label="Total potential")
 #plt.legend()
