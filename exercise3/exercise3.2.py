@@ -103,7 +103,7 @@ def solve_GP(potential, r, algorithm ):
                 # to count the number of iterations of the tangent method
                 counter = 0
                 
-                while delta > acc and counter < 20:
+                while delta > acc and counter < 14:
                     counter = counter + 1
                 
                     mu_2 = mu_0 - phi_0[N-1]*(mu_1-mu_0)/(phi_1[N-1]-phi_0[N-1])
@@ -178,8 +178,8 @@ def calc_energy(r, phi, Na):
     
     #cinetic energy
     der2_phi = (45*phi[0:N-5] - 154*phi[1:N-4] + 214*phi[2:N-3] - 156*phi[3:N-2] + 61*phi[4:N-1] - 10*phi[5:N])/(12*step**2) #error of O(step) because non centered derivative
-    energy_cin = - 1/2 * (np.dot(phi[1:(N-3)],der2_phi[1:(N-3)]) + (phi[0]*der2_phi[0] +phi[N-3]*der2_phi[N-3])/2)*step
-    
+    energy_cin = - 1/2 * (np.dot(phi[1:(N-6)],der2_phi[1:(N-6)]) + (phi[0]*der2_phi[0] +phi[N-6]*der2_phi[N-6])/2)*step
+     
     #external potential energy
     energy_ext = 1/2 * (np.dot(phi[1:(N-1)]*r[1:(N-1)],phi[1:(N-1)]*r[1:(N-1)]) + ((phi[0]*r[0])**2 + (phi[N-1]*r[N-1])**2)/2)*step
     
@@ -193,55 +193,69 @@ def calc_energy(r, phi, Na):
 #%% main
 # definition of main variables
 r_max = 7
-N = 700
+N = 8000
 h = r_max/N
-Na = 100 # this is N_particles * a
-Nmix = 10
-alpha_mix = np.arange(Nmix)/Nmix + 1/Nmix
+Na = [0.01, 0.1, 1, 10, 100] # this is N_particles * a
+alpha_mix = [0.05, 0.3, 0.6, 0.9]
+
 # variables where to store the energy and solutions after 1 iteration
-energy_archive = np.zeros(Nmix)
-phi_archive = np.zeros((Nmix, N))
+energy_archive = np.zeros((len(Na), len(alpha_mix)))
+phi_archive = np.zeros((len(Na), len(alpha_mix), N))
 
 #mash
 r = np.array(range(N))*h+h
 
-for i in range(Nmix):
-    #initial potential guess
-    Vext = 0.5 * r**2
-    phi_guess = np.exp(-1/2*r**2)*np.sqrt( 1/np.sqrt(4*np.pi)*2**(3) )
-    Vint = alpha_mix[i]*Na*phi_guess**2
-    V0 = Vext + Vint
-    
-    #first iteration
-    mu_final, phi_final = solve_GP(V0,r,'numerov')  
-    energy, energy_int = calc_energy(r, phi_final, Na)
-    energy_archive[i] = energy
-    phi_archive[i,:] = phi_final
+for i in range(len(Na)):
+    for j in range(len(alpha_mix)):
+        #initial potential guess
+        Vext = 0.5 * r**2
+        phi_guess = r*np.exp(-1/2*r**2)*np.sqrt( 1/np.sqrt(4*np.pi)*2**(3) )
+        Vint = alpha_mix[j]*Na[i]*(phi_guess/r)**2
+        V0 = Vext + Vint
+        #first iteration
+        mu_final, phi_final = solve_GP(V0,r,'numerov')  
+        energy, energy_int = calc_energy(r, phi_final, Na[i])
+        energy_archive[i, j] = energy
+        phi_archive[i, j, :] = phi_final
 
 
-#plot potentials
-plt.figure()
-for i in range(Nmix):
-    plt.plot(r, phi_archive[i,:]/r, label="alpha_mix="+str((i+1)/Nmix))
-plt.plot(r,phi_guess, label="Non-interaction")
-plt.legend()
-plt.grid(True)
+#%%
+#plot eigenfunctions
+plt.close("all")
+#normalization cutting the tail that can be wrong due to numerov
+cut_function = np.zeros((len(Na), len(alpha_mix), N))
+for i in range(len(Na)):
+    for j in range(len(alpha_mix)):
+        for k in range(round(4.5/7*N)):
+            cut_function[i,j,k] = 1
+#no cut for Na = 100
+for j in range(len(alpha_mix)):
+        for k in range(N):
+            cut_function[4,j,k] = 1
+phi_archive = phi_archive * cut_function
+for i in range(len(Na)):
+    for j in range(len(alpha_mix)):
+        norm = (np.dot(phi_archive[i,j,1:(N-1)],phi_archive[i,j,1:(N-1)]) + (phi_archive[i,j,0]**2 +phi_archive[i,j,N-1]**2)/2)*h
+        phi_archive[i,j,:]= phi_archive[i,j,:]/np.sqrt(norm)
 
-#plot potentials
-plt.figure()
-for i in range(Nmix):
-    Vint = alpha_mix[i]*Na*phi_guess**2
-    V = Vext + Vint
-    plt.plot(r, V, label="alpha_mix="+str((i+1)/Nmix))
-plt.plot(r,Vext, label="Harmonic potential")
-plt.legend()
-plt.grid(True)
-
-#plot convergence of energy
-plt.figure()
-plt.semilogy(np.arange(len(energy_archive))+1,abs(energy_archive-energy_archive[-1]), label="Energy of single particle")
-plt.legend()
-plt.grid(True)
+colors = ["#1f77b4ff", "#ff7f0eff", "#2ca02cff", "#d62728ff"]
+weights = [1/20, 1/2, 2, 20, 60]
+for i in range(len(Na)):
+    plt.figure()
+    ax_pot = plt.gca()
+    ax_pot.plot(r,Vext, "--", label="Harmonic potential", color = "k", linewidth = "1")
+    for j in range(len(alpha_mix)):
+        V = Vext + alpha_mix[j]*Na[i]*(phi_guess/r)**2
+        ax_pot.plot(r, V, "--", color = colors[j], linewidth = "1")
+    ax_phi = plt.twinx()
+    for j in range(len(alpha_mix)):
+        plt.plot(r, phi_archive[i, j, :]/r, label="alpha="+str(alpha_mix[j]), color = colors[j])
+    ax_phi.legend()
+    ax_pot.grid(True)
+    ax_pot.set_xlabel("r in $a_0$ units")
+    ax_phi.set_ylabel("Amplitude in units of (1/$a_0)^{3/2}$")
+    ax_pot.set_ylabel("Potential [V]")
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
 
 
 
