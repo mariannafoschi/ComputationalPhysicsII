@@ -249,13 +249,13 @@ for i in range(len(Na)):
         ax_pot.plot(r, V, "--", color = colors[j], linewidth = "1")
     ax_phi = plt.twinx()
     for j in range(len(alpha_mix)):
-        plt.plot(r, phi_archive[i, j, :]/r, label="alpha="+str(alpha_mix[j]), color = colors[j])
+        plt.plot(r, 1/4/np.pi*(phi_archive[i, j, :]/r)**2, label="alpha="+str(alpha_mix[j]), color = colors[j])
     ax_phi.legend()
     ax_pot.grid(True)
     ax_pot.set_xlabel("r in $a_0$ units")
-    ax_phi.set_ylabel("Amplitude in units of (1/$a_0)^{3/2}$")
+    ax_phi.set_ylabel("Amplitude in units of (1/$a_0)^{3}$")
     ax_pot.set_ylabel("Potential [V]")
-    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    plt.tight_layout()  # otherwise the right y-label is slightly clipped
 
 
 
