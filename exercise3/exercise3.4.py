@@ -16,7 +16,7 @@ print(end - start)
 
 #Defining range and number of steps
 
-r_max = 5
+r_max = 7
 N = 700
 h = r_max/N
 
@@ -168,14 +168,14 @@ mu,phi = solve_GP(V,r,'fd_method')
 print(mu)
 
 #%% Measuring efficiency
-n = [100,300,600,750,1000,1500,2000]
+n = [100,300,600,750,1000,2000,5000,10000]
 timing_numerov = np.zeros(len(n))
 timing_fd = np.zeros(len(n))
 acc_numerov = np.zeros(len(n))
 acc_fd = np.zeros(len(n))
 #Numerov
 for i in range(len(n)):
-    r_max = 5
+    r_max = 7
     N = n[i]
     h = r_max/N
     #mash
@@ -189,18 +189,18 @@ for i in range(len(n)):
     timing_numerov[i]=(end-start)/10
     
 for i in range(len(n)):
-    r_max = 5
+    r_max = 7
     N = n[i]
     h = r_max/N
     #mash
     r = np.array(range(N))*h+h
     V = 0.5* r**2
     start = time.time()
-    for j in range(10):
+    for j in range(100):
         mu,phi = solve_GP(V,r,'fd_method')
     end = time.time()
     acc_fd[i]= np.abs(1.5-mu)
-    timing_fd[i]=(end-start)/10
+    timing_fd[i]=(end-start)/100
 
 #%%    
 plt.loglog(n,timing_numerov,label='numerov')
@@ -209,13 +209,16 @@ ax = plt.gca()
 ax.legend()
 plt.ylabel('time for 1 execution [s]')
 plt.xlabel('numer of points in the mesh')
+plt.grid('True')
 plt.show()
+
 
 plt.figure()
 plt.loglog(n,acc_numerov,label='numerov')
 plt.loglog(n,acc_fd,label='finite difference')
 ax = plt.gca()
 ax.legend()
-plt.ylabel('error on the harmonic oscillator ground state energy')
+plt.ylabel('energy error')
 plt.xlabel('numer of points in the mesh')
+plt.grid('True')
 plt.show()

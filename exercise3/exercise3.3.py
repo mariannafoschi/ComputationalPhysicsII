@@ -195,7 +195,7 @@ h = r_max/N
 Na =[0.01,0.1,1,10,100] #[0.01, 0.1, 1, 10, 100] # this is N_particles * a
 Nmix = 30
 alpha_mix = 10**(np.arange(Nmix)/Nmix*2 -2)
-
+alpha_mix = [0.04]
 #mash
 r = np.array(range(N))*h+h
 
@@ -218,7 +218,7 @@ for i in range(len(Na)):
         V = Vext + Vint
 
         #self consistency first step
-        mu_final, phi_final = solve_GP(V,r,'fd_method')  
+        mu_final, phi_final = solve_GP(V,r,'numerov')  
         energy, energy_int = calc_energy(r, phi_final, Na[i])
         difference = (energy - (mu_final - energy_int))
         cont = 1
@@ -232,7 +232,7 @@ for i in range(len(Na)):
             else:                
                 Vint = alpha_mix[j]*Na[i]*phi_final**2/(r**2) + (1-alpha_mix[j])*(V-Vext)
                 V = Vext + Vint
-                mu_final, phi_final = solve_GP(V,r,'fd_method')
+                mu_final, phi_final = solve_GP(V,r,'numerov')
                 energy, energy_int = calc_energy(r, phi_final, Na[i])
                 difference = (energy - (mu_final - energy_int))
                 cont +=1
@@ -250,9 +250,9 @@ for i in range(len(Na)):
         
 
 #%%
-for i in range(30):
-    if convergence[4,i] ==0:
-        convergence[4,i]=200;
+#for i in range(30):
+#    if convergence[4,i] ==0:
+#        convergence[4,i]=200;
 
 plt.figure()
 for i in range(len(Na)):
