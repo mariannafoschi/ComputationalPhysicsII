@@ -14,19 +14,6 @@ import matplotlib.colors as colors
 import time
 
 
-def numerov(energy,potential,spin,r): 
-    
-    phi = np.ones(len(r))
-    step = r[1]-r[0]
-    K2 = 2*energy-2*potential #evaluate the k^2 parameter   
-    i=2
-    phi[0] =(step)**(spin+1) #near zero wf goes like r^l+1
-    phi[1] =(2*step)**(spin+1) 
-    while i<len(r):
-        phi[i]= (2*phi[i-1]*(1-5/12*step**2 *K2[i-1])-phi[i-2]*(1+step**2 /12*K2[i-2]))/(1+step**2/12*K2[i])
-        i += 1 
-    
-    return phi
 def solve_eq(potential, r, spin, n_states):
     #input: -potential: starts from r=step, must not include the effective centrifugal one
     #       -r: is the mesh of length N and should starts starts from step
