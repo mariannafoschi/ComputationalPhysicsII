@@ -49,7 +49,7 @@ def solve_eq(potential, r, spin, n_states):
 #%% MAIN
 #wiegner radius and othe parameters
 r_s = 4.86
-N_e = 8
+N_e = 40
 rho_b = 3/4/np.pi /r_s**3
 R_c = N_e**(1/3)*r_s
 L_max = 4
@@ -102,5 +102,8 @@ if fill>N_e:
     rho = rho - (fill-N_e)*(phi[:,n,l]/r)**2 /4*np.pi
     
 plt.plot(r,rho)
+plt.show()
+
+plt.plot(r,potential)
 plt.show()
 #%%
