@@ -52,8 +52,9 @@ def V_ext(mesh):
     return vext
 
 def V_xc(density):
+    rs = (3/(4*np.pi*density))**(1/3)
     v_exchange = -(3/np.pi)**(1/3)*density**(1/3)
-    v_correlation = gamma*(1+7/6*beta1*np.sqrt(r_s)+4/3*beta2*r_s)/(1+beta1*np.sqrt(r_s)+beta2*r_s)**2
+    v_correlation = gamma*(1+7/6*beta1*np.sqrt(rs)+4/3*beta2*rs)/(1+beta1*np.sqrt(rs)+beta2*rs)**2
     vxc= v_exchange + v_correlation
     
     return vxc
@@ -65,7 +66,7 @@ def V_int(mesh,density):
     for i in range(N): 
         vint1[i] = 4*np.pi/mesh[i]*h*(np.dot(mesh[0:i]**2,density[0:i])-0.5*mesh[i]**2*density[i]) # CHECK estremi credo siano giusti ma un check non guasta
         vint2[i] = 4*np.pi*h*(np.dot(mesh[i:],density[i:]) - 0.5*mesh[i]*density[i] - 0.5*mesh[N-1]*density[N-1])
-        vint = vint1 + vint2
+    vint = vint2 + vint2
     
     return vint
 
@@ -105,6 +106,8 @@ def build_density(potential, mesh):
         density = density - (fill-N_e)*(wf[:,n,l]/mesh)**2 /4*np.pi
         sum_eig = sum_eig - (fill-N_e)*E[n,l]
         
+    density[N-1] = density[N-2]
+        
     return density, sum_eig
 
 def weighted_integ(function, density):
@@ -131,35 +134,41 @@ n_states = 3
 
 # simulation parametes
 acc = 10**(-4)
-alpha = 0.3
-N = 10**5
+alpha = 0.2
+N = 10**4
 r_max= 3*R_c
 h = r_max/N
 r = np.array(range(N))*h +h
 
 # CREATE ANSATZ DENSITY IN n_states v ext OUT rho
 # ----------------------------------------------------------------------------
-basic_pot = V_ext(r)
-rho, sum_mu = build_density(r,basic_pot)
-plt.plot(r,rho)
-plt.show() 
+v_ext = V_ext(r)
+rho, sum_mu = build_density(v_ext,r)
+#plt.plot(r,rho)
+#plt.show() 
+#plt.plot(r,v_ext)
+#plt.show()
 
 # %% START SELF CONSISTENT PROCEDURE
 # ----------------------------------------------------------------------------
 energy = 0
 energy_previous = 0
 energy_diff = 2*acc
+potential_previous = v_ext
 
 k=0
 
-while energy_diff > acc:
-    
-    # save values of previous iteration
-    rho_previous = rho
-    energy_previous = energy
+while energy_diff > acc and k<100:
     
     # calculate total potential (dependent on density)
-    tot_pot = V_ext(r) + V_int(r, rho) + V_xc(rho)
+    potential_new = v_ext + V_int(r, rho) + V_xc(rho)
+    
+    #plt.plot(r,v_ext)
+    #plt.plot(r,V_int(r, rho))
+    #plt.plot(r,V_xc(rho))
+    #plt.show()
+    
+    tot_pot = (1-alpha)*potential_previous + alpha*potential_new
     
     # solve KS equation and calculate density and the sum of the energy eigenvalues mu
     rho, sum_mu = build_density(tot_pot, r)
@@ -168,16 +177,25 @@ while energy_diff > acc:
     energy = sum_mu - 0.5*weighted_integ(V_int(r,rho), rho) - weighted_integ(V_xc(rho), rho) + weighted_integ(-3/4*(3/np.pi)**(1/3)*rho**(1/3), rho) + weighted_integ(gamma/(1+beta1*np.sqrt(r)+beta2*r), rho)
     energy_diff = np.abs(energy - energy_previous)
     
-    # compute mix between old and new density
-    rho = (1-alpha)*rho_previous + alpha*rho
+    # save values of previous iteration
+    energy_previous = energy
+    potential_previous = tot_pot
     
     k=k+1
     print(k)
+    
+    #plt.plot(r,rho)
+    #plt.show()
 
 # PLOT DENSITY
-# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------   
 plt.plot(r,rho)
-plt.show()    
+plt.show()
+plt.plot(r,tot_pot)
+plt.show()
+# %%
+
+
     
 
 
