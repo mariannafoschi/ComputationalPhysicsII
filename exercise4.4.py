@@ -60,13 +60,16 @@ def V_xc(density):
     return vxc
 
 def V_int(mesh,density): 
-    vint1 = np.zeros(N)
-    vint2 = np.zeros(N)
+    int1 = np.zeros(N)
+    int2 = np.zeros(N)
+    
     # trapezoidal method integration
-    for i in range(N): 
-        vint1[i] = 4*np.pi/mesh[i]*h*(np.dot(mesh[0:i]**2,density[0:i])-0.5*mesh[i]**2*density[i]) # CHECK estremi credo siano giusti ma un check non guasta
-        vint2[i] = 4*np.pi*h*(np.dot(mesh[i:],density[i:]) - 0.5*mesh[i]*density[i] - 0.5*mesh[N-1]*density[N-1])
-    vint = vint2 + vint2
+    int1[0] = 0.5*h*mesh[0]**2*density[0]
+    int2[0] = h*(np.dot(mesh[:],density[:]) - 0.5*mesh[0]*density[0] - 0.5*mesh[N-1]*density[N-1])
+    for i in range(N-1):
+        int1[i+1] = int1[i] + 0.5*h*(mesh[i+1]**2*density[i+1] + mesh[i]**2*density[i])
+        int2[i+1] = int2[i] - 0.5*h*(mesh[i+1]*density[i+1] + mesh[i]*density[i])
+    vint = 4*np.pi*[int1/mesh + int2]
     
     return vint
 
