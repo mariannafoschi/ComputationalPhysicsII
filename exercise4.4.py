@@ -60,16 +60,16 @@ def V_xc(density):
     return vxc
 
 def V_int(mesh,density): 
-    int1 = np.zeros(N)
-    int2 = np.zeros(N)
+    vint1 = np.zeros(N)
+    vint2 = np.zeros(N)
     
     # trapezoidal method integration
-    int1[0] = 0.5*h*mesh[0]**2*density[0]
-    int2[0] = h*(np.dot(mesh[:],density[:]) - 0.5*mesh[0]*density[0] - 0.5*mesh[N-1]*density[N-1])
+    vint1[0] = 0.5*h*mesh[0]**2*density[0]
+    vint2[0] = h*(np.dot(mesh[:],density[:]) - 0.5*mesh[0]*density[0] - 0.5*mesh[N-1]*density[N-1])
     for i in range(N-1):
-        int1[i+1] = int1[i] + 0.5*h*(mesh[i+1]**2*density[i+1] + mesh[i]**2*density[i])
-        int2[i+1] = int2[i] - 0.5*h*(mesh[i+1]*density[i+1] + mesh[i]*density[i])
-    vint = 4*np.pi*[int1/mesh + int2]
+        vint1[i+1] = vint1[i] + 0.5*h*(mesh[i+1]**2*density[i+1] + mesh[i]**2*density[i])
+        vint2[i+1] = vint2[i] - 0.5*h*(mesh[i+1]*density[i+1] + mesh[i]*density[i])
+    vint = 4*np.pi*(vint1/mesh + vint2)
     
     return vint
 
@@ -98,7 +98,7 @@ def build_density(potential, mesh):
     while fill<N_e:
         l = int(E_sort[k,1])
         n = int(E_sort[k,2])
-        density = density + 2*(2*l+1)*(wf[:,n,l]/mesh)**2 /4*np.pi
+        density = density + 2*(2*l+1)*(wf[:,n,l]/mesh)**2 /(4*np.pi)
         sum_eig = sum_eig + 2*(2*l+1)*E[n,l]
         fill = fill + 2*(2*l+1)
         k=k+1
@@ -106,7 +106,7 @@ def build_density(potential, mesh):
     if fill>N_e:
         print('WARNING')
         print('shell not closed: need ' + str(fill-N_e)+ ' electrons to fill the state')
-        density = density - (fill-N_e)*(wf[:,n,l]/mesh)**2 /4*np.pi
+        density = density - (fill-N_e)*(wf[:,n,l]/mesh)**2 /(4*np.pi)
         sum_eig = sum_eig - (fill-N_e)*E[n,l]
         
     density[N-1] = density[N-2]
@@ -161,15 +161,15 @@ potential_previous = v_ext
 
 k=0
 
-while energy_diff > acc and k<100:
+while energy_diff > acc and k<10:
     
     # calculate total potential (dependent on density)
     potential_new = v_ext + V_int(r, rho) + V_xc(rho)
     
-    #plt.plot(r,v_ext)
-    #plt.plot(r,V_int(r, rho))
-    #plt.plot(r,V_xc(rho))
-    #plt.show()
+    plt.plot(r,v_ext)
+    plt.plot(r,V_int(r, rho))
+    plt.plot(r,V_xc(rho))
+    plt.show()
     
     tot_pot = (1-alpha)*potential_previous + alpha*potential_new
     
