@@ -61,6 +61,7 @@ def V_xc(density):
 def V_int(mesh,density): 
     vint1 = np.zeros(N)
     vint2 = np.zeros(N)
+    density = density/4/np.pi/mesh**2
     # trapezoidal method integration
     for i in range(N): 
         vint1[i] = 4*np.pi/mesh[i]*h*(np.dot(mesh[0:i]**2,density[0:i])-0.5*mesh[i]**2*density[i]) # CHECK estremi credo siano giusti ma un check non guasta
@@ -119,7 +120,7 @@ def weighted_integ(function, density):
 # DEFINE VARIABLES
 # ----------------------------------------------------------------------------
 # system parameters
-r_s = 4.86
+r_s = 3.92
 gamma = -0.103756 # che unità di misura è H?????? Hertree?
 beta1 = 0.56371
 beta2 = 0.27358
@@ -131,9 +132,13 @@ n_states = 3
 
 # simulation parametes
 acc = 10**(-4)
+<<<<<<< Updated upstream
 alpha = 0.3
+=======
+alpha = 0.002
+>>>>>>> Stashed changes
 N = 10**4
-r_max= 3*R_c
+r_max= 2.5*R_c
 h = r_max/N
 r = np.array(range(N))*h +h
 
@@ -152,11 +157,33 @@ energy_diff = 2*acc
 
 k=0
 
+<<<<<<< Updated upstream
 while energy_diff > acc:
     
     # save values of previous iteration
     rho_previous = rho
     energy_previous = energy
+=======
+while energy_diff > acc and k<10:
+    
+    # calculate total potential (dependent on density)
+    potential_new = v_ext + V_int(r, rho) + V_xc(rho)
+    
+    plot=1
+    if plot==1:
+        plt.plot(r,v_ext)
+        plt.plot(r,V_int(r,rho))
+        plt.plot(r,V_xc(rho))
+        plt.plot(r,potential_new)
+        plt.show()
+    #plt.plot(r,v_ext)
+    #plt.plot(r,V_int(r, rho))
+    #plt.plot(r,V_xc(rho))
+    #plt.show()
+    if k == 0:
+        potential_previous = potential_new
+    tot_pot = (1-alpha)*potential_previous + alpha*potential_new
+>>>>>>> Stashed changes
     
     start = time.time()
     # calculate total potential (dependent on density)
@@ -165,7 +192,16 @@ while energy_diff > acc:
     print(end-start)
     start = time.time()
     # solve KS equation and calculate density and the sum of the energy eigenvalues mu
+<<<<<<< Updated upstream
     rho, sum_mu = build_density(r,tot_pot)
+=======
+    rho, sum_mu = build_density(tot_pot, r)
+
+    if plot==1:
+        plt.plot(r,rho)
+        plt.show()
+
+>>>>>>> Stashed changes
     # compute energy
     start = time.time()
     energy = sum_mu - 0.5*weighted_integ(V_int(r,rho), rho) - weighted_integ(V_xc(rho), rho) + weighted_integ(-3/4*(3/np.pi)**(1/3)*rho**(1/3), rho) + weighted_integ(gamma/(1+beta1*np.sqrt(r)+beta2*r), rho)
@@ -180,9 +216,17 @@ while energy_diff > acc:
     print(k)
 
 # PLOT DENSITY
+<<<<<<< Updated upstream
 # ----------------------------------------------------------------------------
 plt.plot(r,rho)
 plt.show()    
+=======
+# ----------------------------------------------------------------------------   
+
+# %%
+
+
+>>>>>>> Stashed changes
     
 
 
