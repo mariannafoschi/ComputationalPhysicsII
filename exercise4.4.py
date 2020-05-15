@@ -102,16 +102,19 @@ def build_density(potential, mesh):
         sum_eig = sum_eig + 2*(2*l+1)*E[n,l]
         fill = fill + 2*(2*l+1)
         k=k+1
-
+    warn =0
     if fill>N_e:
         print('WARNING')
         print('shell not closed: need ' + str(fill-N_e)+ ' electrons to fill the state')
+        warn=1
         density = density - (fill-N_e)*(wf[:,n,l]/mesh)**2 /(4*np.pi)
         sum_eig = sum_eig - (fill-N_e)*E[n,l]
+        print(n)
+        print(l)
         
     density[N-1] = density[N-2]
         
-    return density, sum_eig
+    return density, sum_eig , warn
 
 def weighted_integ(function, density):
     integral = h*(np.dot(function,density) - 0.5*function[N-1]*density[N-1])
@@ -133,11 +136,11 @@ N_e = 40
 rho_b = 3/4/np.pi /r_s**3
 R_c = N_e**(1/3)*r_s
 L_max = 4
-n_states = 3
+n_states = 4
 
 # simulation parametes
 acc = 10**(-4)
-alpha = 0.2
+alpha = 0.1
 N = 10**4
 r_max= 3*R_c
 h = r_max/N
@@ -146,7 +149,7 @@ r = np.array(range(N))*h +h
 # CREATE ANSATZ DENSITY IN n_states v ext OUT rho
 # ----------------------------------------------------------------------------
 v_ext = V_ext(r)
-rho, sum_mu = build_density(v_ext,r)
+rho, sum_mu,warn = build_density(v_ext,r)
 #plt.plot(r,rho)
 #plt.show() 
 #plt.plot(r,v_ext)
@@ -159,43 +162,75 @@ energy_previous = 0
 energy_diff = 2*acc
 potential_previous = v_ext
 
-k=0
+Nee = [2,8,20,40]
+density = np.zeros((N,4))
+E_fin = np.zeros(4)
+for j in range(4):
+    k=0
+    N_e = Nee[j]
+    rho_b = 3/4/np.pi /r_s**3
+    R_c = N_e**(1/3)*r_s
 
-while energy_diff > acc and k<10:
+    rho = 1/(1+np.exp(1*(r-R_c)))
+    norm = h*sum(rho*r**2)*4*np.pi
+    rho = N_e* rho/norm
+    v_ext = V_ext(r)
+    energy = 0
+    energy_previous = 0
+    energy_diff = 2*acc
+    potential_previous = v_ext
+    while energy_diff > acc and k<1000:
+        
+        # calculate total potential (dependent on density)
+        potential_new = v_ext + V_int(r, rho) + V_xc( rho)
+        print(V_int(r,rho)[-1]/v_ext[-1])
+        plot=0
+        if plot ==1:
+            plt.plot(r,v_ext,color='b')
+            plt.plot(r,V_int(r, rho),color='g')
+            plt.plot(r,V_int(r, rho)-V_xc(rho),color='k')
     
-    # calculate total potential (dependent on density)
-    potential_new = v_ext + V_int(r, rho) + V_xc(rho)
+            plt.plot(r,V_xc(rho),color='r')
+            plt.show()
+        
+        tot_pot = (1-alpha)*potential_previous + alpha*potential_new
+        
+        # solve KS equation and calculate density and the sum of the energy eigenvalues mu
+        if plot ==1:
+            plt.plot(r,rho)
+            
+        rho, sum_mu,warn = build_density(tot_pot, r)
     
-    plt.plot(r,v_ext)
-    plt.plot(r,V_int(r, rho))
-    plt.plot(r,V_xc(rho))
-    plt.show()
-    
-    tot_pot = (1-alpha)*potential_previous + alpha*potential_new
-    
-    # solve KS equation and calculate density and the sum of the energy eigenvalues mu
-    rho, sum_mu = build_density(tot_pot, r)
-    
-    # compute energy
-    energy = sum_mu - 0.5*weighted_integ(V_int(r,rho), rho) - weighted_integ(V_xc(rho), rho) + weighted_integ(-3/4*(3/np.pi)**(1/3)*rho**(1/3), rho) + weighted_integ(gamma/(1+beta1*np.sqrt(r)+beta2*r), rho)
-    energy_diff = np.abs(energy - energy_previous)
-    
-    # save values of previous iteration
-    energy_previous = energy
-    potential_previous = tot_pot
-    
-    k=k+1
-    print(k)
-    
-    #plt.plot(r,rho)
-    #plt.show()
+        if plot ==1:
+           plt.plot(r,rho)
+           plt.show()
+        
+        # compute energy
+        energy = sum_mu - 0.5*weighted_integ(V_int(r,rho), rho) - weighted_integ(V_xc(rho), rho) + weighted_integ(-3/4*(3/np.pi)**(1/3)*rho**(1/3), rho) + weighted_integ(gamma/(1+beta1*np.sqrt(r)+beta2*r), rho)
+        energy_diff = np.abs(energy - energy_previous)
+        
+        # save values of previous iteration
+        energy_previous = energy
+        potential_previous = tot_pot
+        
+        k=k+1
+        print(k)
+        print(energy)
+    print(energy)
+    E_fin[j] = energy
+    density[:,j] = rho    
+        #plt.plot(r,rho)
+        #plt.show()
 
 # PLOT DENSITY
-# ----------------------------------------------------------------------------   
-plt.plot(r,rho)
-plt.show()
+# %%----------------------------------------------------------------------------   
+for i in range(4):
+    plt.plot(r,density[:,i],label='N ='+str(Nee[i]))
+    plt.legend()
+    plt.show()
 plt.plot(r,tot_pot)
 plt.show()
+
 # %%
 
 
