@@ -127,13 +127,13 @@ def weighted_integ(function, density):
 
 # DEFINE VARIABLES
 # ----------------------------------------------------------------------------
+    
 # system parameters
 r_s = 3.93
-gamma = -0.103756 # che unità di misura è H?????? Hertree?
+gamma = -0.103756 
 beta1 = 0.56371
 beta2 = 0.27358
 rho_b = 3/4/np.pi /r_s**3
-R_c = N_e**(1/3)*r_s
 L_max = 4
 n_states = 4
 
@@ -141,48 +141,44 @@ n_states = 4
 acc = 10**(-7)
 alpha = 0.1
 N = 10**4
-r_max= 3*R_c
+r_max= 3*40**(1/3)*r_s # note: 40 è il valore massimo di Nee.
 h = r_max/N
 r = np.array(range(N))*h +h
 
-# CREATE ANSATZ DENSITY IN n_states v ext OUT rho
-# ----------------------------------------------------------------------------
-v_ext = V_ext(r)
-rho, sum_mu,warn = build_density(v_ext,r)
-#plt.plot(r,rho)
-#plt.show() 
-#plt.plot(r,v_ext)
-#plt.show()
-
-# %% START SELF CONSISTENT PROCEDURE
-# ----------------------------------------------------------------------------
-energy = 0
-energy_previous = 0
-energy_diff = 2*acc
-potential_previous = v_ext
-
+# Define variables for the different number of shells that we consider
 Nee = [2,8,20,40]
-density = np.zeros((N,4))
+densities = np.zeros((N,4))
 E_fin = np.zeros(4)
+polariz = np.zeros(4)
+
+# %% CYCLE OVER SHELLS ---> SELF CONSISTENT PROCEDURE 
+# ----------------------------------------------------------------------------
+
+# Cycle over the number of shells considered
 for j in range(4):
     k=0
     N_e = Nee[j]
     rho_b = 3/4/np.pi /r_s**3
     R_c = N_e**(1/3)*r_s
-
+    
+    # define initial density
     rho = 1/(1+np.exp(1*(r-R_c)))
     norm = h*sum(rho*r**2)*4*np.pi
     rho = N_e* rho/norm
-    v_ext = V_ext(r)
+    
+    # initialise energy variables for self consistent procedure
     energy = 0
     energy_previous = 0
     energy_diff = 2*acc
+    v_ext = V_ext(r)
     potential_previous = v_ext
+    
+    # self consistent procedure
     while energy_diff > acc and k<10000:
         
         # calculate total potential (dependent on density)
         potential_new = v_ext + V_int(r, rho) + V_xc( rho)
-        print(V_int(r,rho)[-1]/v_ext[-1])
+        #print(V_int(r,rho)[-1]/v_ext[-1])
         plot=0
         if plot ==1:
             plt.plot(r,v_ext,color='b')
@@ -217,21 +213,28 @@ for j in range(4):
         print(k)
         print(energy)
     print(energy)
+    
     E_fin[j] = energy
-    density[:,j] = rho    
-        #plt.plot(r,rho)
-        #plt.show()
+    densities[:,j] = rho   
+    
+    # polarizability
+    ii=0
+    identita = np.ones(N)
+    while r[ii] < R_c:
+        ii = ii + 1
+    
+    deltaN = h*np.dot(identita[ii:],rho[ii:]) - 0.5*h*rho[-1]
+    
+    polariz[j] = R_c**3*(1+deltaN/N_e)
 
 # PLOT DENSITY
 # %%----------------------------------------------------------------------------   
 for i in range(4):
-    plt.plot(r,density[:,i],label='N ='+str(Nee[i]))
+    plt.plot(r,densities[:,i],label='N ='+str(Nee[i]))
     plt.legend()
     plt.show()
 plt.plot(r,tot_pot)
 plt.show()
-
-# %%
 
 
     
