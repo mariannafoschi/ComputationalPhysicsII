@@ -117,7 +117,7 @@ def build_density(potential, mesh):
     return density, sum_eig , warn
 
 def weighted_integ(function, density):
-    integral = h*(np.dot(function,density) - 0.5*function[N-1]*density[N-1])
+    integral = 4*np.pi*h*(np.dot(function,density) - 0.5*function[N-1]*density[N-1])
     
     return integral
 
@@ -128,18 +128,17 @@ def weighted_integ(function, density):
 # DEFINE VARIABLES
 # ----------------------------------------------------------------------------
 # system parameters
-r_s = 4.86
+r_s = 3.93
 gamma = -0.103756 # che unità di misura è H?????? Hertree?
 beta1 = 0.56371
 beta2 = 0.27358
-N_e = 40
 rho_b = 3/4/np.pi /r_s**3
 R_c = N_e**(1/3)*r_s
 L_max = 4
 n_states = 4
 
 # simulation parametes
-acc = 10**(-4)
+acc = 10**(-7)
 alpha = 0.1
 N = 10**4
 r_max= 3*R_c
@@ -179,7 +178,7 @@ for j in range(4):
     energy_previous = 0
     energy_diff = 2*acc
     potential_previous = v_ext
-    while energy_diff > acc and k<1000:
+    while energy_diff > acc and k<10000:
         
         # calculate total potential (dependent on density)
         potential_new = v_ext + V_int(r, rho) + V_xc( rho)
@@ -206,7 +205,8 @@ for j in range(4):
            plt.show()
         
         # compute energy
-        energy = sum_mu - 0.5*weighted_integ(V_int(r,rho), rho) - weighted_integ(V_xc(rho), rho) + weighted_integ(-3/4*(3/np.pi)**(1/3)*rho**(1/3), rho) + weighted_integ(gamma/(1+beta1*np.sqrt(r)+beta2*r), rho)
+        erres = (3/(4*np.pi*rho))**(1/3)
+        energy = sum_mu - 0.5*weighted_integ(V_int(r,rho), rho) - weighted_integ(V_xc(rho), rho) + weighted_integ(-3/4*(3/np.pi)**(1/3)*rho**(1/3), rho) + weighted_integ(gamma/(1+beta1*np.sqrt(erres)+beta2*erres), rho)
         energy_diff = np.abs(energy - energy_previous)
         
         # save values of previous iteration

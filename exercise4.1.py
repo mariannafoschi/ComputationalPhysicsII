@@ -48,7 +48,7 @@ def solve_eq(potential, r, spin, n_states):
 
 #%% MAIN
 #wiegner radius and othe parameters
-r_s = 4.86
+r_s = 3.93
 N_e = 40
 rho_b = 3/4/np.pi /r_s**3
 R_c = N_e**(1/3)*r_s
@@ -60,6 +60,7 @@ r_max= 3*R_c
 h = r_max/N
 r = np.array(range(N))*h +h
 potential = np.zeros(N)
+E_tot = 0
 for i in range(N):
     if r[i]<R_c:
         potential[i]= 2*np.pi*rho_b*(1/3*r[i]**2-R_c**2)
@@ -92,6 +93,7 @@ while fill<N_e:
     l = int(E_sort[k,1])
     n = int(E_sort[k,2])
     rho = rho + 2*(2*l+1)*(phi[:,n,l]/r)**2 /4*np.pi
+    E_tot = E_tot + 2*(2*l+1)*E_sort[k, 0]
     fill = fill + 2*(2*l+1)
     k=k+1
 
@@ -100,6 +102,7 @@ if fill>N_e:
     print('shell not closed: need ' + str(fill-N_e)+ ' electrons to fill the state')
    
     rho = rho - (fill-N_e)*(phi[:,n,l]/r)**2 /4*np.pi
+    E_tot = E_tot- (fill-N_e) *E_sort[k, 0]
     
 plt.plot(r,rho)
 plt.show()
