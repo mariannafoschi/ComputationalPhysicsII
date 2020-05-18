@@ -117,7 +117,7 @@ def build_density(potential, mesh):
     return density, sum_eig , warn
 
 def weighted_integ(function, density):
-    integral = 4*np.pi*h*(np.dot(function,density) - 0.5*function[N-1]*density[N-1])
+    integral = 4*np.pi*h*(np.dot(r**2*function,density) - 0.5*r[N-1]**2*function[N-1]*density[N-1])
     
     return integral
 
@@ -146,7 +146,7 @@ def E_kin(mesh, potential, n_shells):
             integrand = integrand + 2*(2*ll+1)*wf[:,nn,ll]*(-0.5*wf_der2[:,nn,ll] + 0.5*ll*(ll+1)/(mesh**2)*wf[:,nn,ll])
     
     # integrate function to get kinetic term
-    kinetic = h*4*np.pi*np.dot(mesh**2,integrand) - 0.5*h*4*np.pi*(mesh[0]**2*integrand[0] + mesh[-1]**2*integrand[-1])
+    kinetic = h*np.dot(np.ones(np.shape(integrand)),integrand) - 0.5*h*(integrand[0] + integrand[-1])
      
     return kinetic
 
@@ -167,7 +167,7 @@ L_max = 4
 n_states = 4
 
 # simulation parametes
-acc = 10**(-7)
+acc = 10**(-4)
 alpha = 0.1
 N = 10**4
 r_max= 3*40**(1/3)*r_s # note: 40 è il valore massimo di Nee.
@@ -175,10 +175,11 @@ h = r_max/N
 r = np.array(range(N))*h +h
 
 # Define variables for the different number of shells that we consider
-Nee = [2,8,20,40]
+Nee = [2, 8, 20, 40]
 densities = np.zeros((N,4))
 E_fin = np.zeros(4)
 E_fin2 = np.zeros(4)
+deltaN = np.zeros(4)
 polariz = np.zeros(4)
 
 # %% CYCLE OVER SHELLS ---> SELF CONSISTENT PROCEDURE 
@@ -256,8 +257,8 @@ for j in range(4):
     ii=0
     while r[ii] < R_c:
         ii = ii + 1
-    deltaN = 4*np.pi*h*np.dot(r[ii:]**2,rho[ii:]) - 0.5*h*rho[-1]
-    polariz[j] = R_c**3*(1+deltaN/N_e)
+    deltaN[j] = 4*np.pi*h*np.dot(r[ii:]**2,rho[ii:]) - 0.5*h*4*np.pi*r[-1]**2*rho[-1]
+    polariz[j] = R_c**3*(1+deltaN[j]/N_e)
     
     # Plot del potenziale efficace
     if j>0:
@@ -285,8 +286,13 @@ plt.show()
 #plt.plot(r,tot_pot)
 #plt.show()
 
-
+#%%
+R_cc = np.array([Nee[i]**(1/3) for i in range(4)])*r_s
+E_fin = E_fin + 3/5 *np.array(Nee)**2 /R_cc
+print("Energy per particle in H: ", E_fin/Nee)
+print("Energy per particle in eV: ", E_fin/Nee*27.2)
     
-
+#%%
+E_fin2 = E_fin2 + 3/5 *np.array(Nee)**2 /R_cc
 
 
