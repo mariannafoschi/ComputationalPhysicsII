@@ -44,66 +44,119 @@ def solve_eq(potential, r, spin, n_states):
     #phi =np.ones(N)
     #returns the ground state
     return mu, phi
+def build_density(potential, mesh,N_e):
+    density = np.zeros(N)
+    sum_eig = 0
+    E = np.zeros((n_states,L_max+1))
+    wf = np.zeros((N,n_states,L_max+1))
 
+    for l in range(L_max+1):
+        E[:,l],wf[:,:,l] = solve_eq(potential,mesh,l,n_states)
+
+    E_sort = np.zeros(((L_max+1)*n_states,3))
+    for i in range(L_max+1):
+        E_sort[(i*n_states):((i+1)*n_states),0] = E[:,i]
+        E_sort[(i*n_states):((i+1)*n_states),1] = i*np.ones(n_states)
+        E_sort[(i*n_states):((i+1)*n_states),2] = np.array(range(n_states))
+
+    ind_sort = np.argsort(E_sort[:,0])
+    E_temp = E_sort
+    E_sort = E_temp[ind_sort,:]
+
+    #fill electrons
+    fill=0
+    k = 0
+    while fill<N_e:
+        l = int(E_sort[k,1])
+        n = int(E_sort[k,2])
+        density = density + 2*(2*l+1)*(wf[:,n,l]/mesh)**2 /(4*np.pi)
+        sum_eig = sum_eig + 2*(2*l+1)*E[n,l]
+        fill = fill + 2*(2*l+1)
+        k=k+1
+    warn =0
+    if fill>N_e:
+        print('WARNING')
+        print('shell not closed: need ' + str(fill-N_e)+ ' electrons to fill the state')
+        warn=1
+        density = density - (fill-N_e)*(wf[:,n,l]/mesh)**2 /(4*np.pi)
+        sum_eig = sum_eig - (fill-N_e)*E[n,l]
+        print(n)
+        print(l)
+        
+    density[N-1] = density[N-2]
+        
+    return density, sum_eig , 
+
+def V_ext(mesh,r_s,Ne):
+    # input: mesh
+    # output: vext potential term vector
+    rho_b = 3/4/np.pi /r_s**3
+    Rc = Ne**(1/3)*r_s
+    vext = np.zeros(N)
+    for i in range(N):
+        if mesh[i]<Rc:
+            vext[i]= 2*np.pi*rho_b*(1/3*mesh[i]**2-Rc**2)
+        else:
+            vext[i]= -4*np.pi*rho_b/3*Rc**3/mesh[i]
+            
+    return vext
 
 #%% MAIN
 #wiegner radius and othe parameters
-r_s = 4.86
-N_e = 40
+r_s = 3.93
+N_e = np.array([2,8,20,40])
 rho_b = 3/4/np.pi /r_s**3
-R_c = N_e**(1/3)*r_s
+R_c = np.array([N_e[i]**(1/3)*r_s for i in range(4)])
 L_max = 4
 n_states = 3
 #mesh
 N = 10**5
 r_max= 3*R_c
 h = r_max/N
-r = np.array(range(N))*h +h
-potential = np.zeros(N)
-for i in range(N):
-    if r[i]<R_c:
-        potential[i]= 2*np.pi*rho_b*(1/3*r[i]**2-R_c**2)
-        
-    else:
-        potential[i]= -4*np.pi*rho_b/3*R_c**3/r[i]
-        
-E = np.zeros((n_states,L_max+1))
-phi = np.zeros((N,n_states,L_max+1))
-
-for l in range(L_max+1):
-    E[:,l],phi[:,:,l] = solve_eq(potential,r,l,n_states)
-
-E_sort = np.zeros(((L_max+1)*n_states,3))
-for i in range(L_max+1):
-    E_sort[(i*n_states):((i+1)*n_states),0] = E[:,i]
-    E_sort[(i*n_states):((i+1)*n_states),1] = i*np.ones(n_states)
-    E_sort[(i*n_states):((i+1)*n_states),2] = np.array(range(n_states))
-
-ind_sort = np.argsort(E_sort[:,0])
-E_temp = E_sort
-E_sort = E_temp[ind_sort,:]
-
-#fill electrons
-N_e = 40
-fill=0
-rho = np.zeros(N)
-k = 0
-while fill<N_e:
-    l = int(E_sort[k,1])
-    n = int(E_sort[k,2])
-    rho = rho + 2*(2*l+1)*(phi[:,n,l]/r)**2 /4*np.pi
-    fill = fill + 2*(2*l+1)
-    k=k+1
-
-if fill>N_e:
-    print('WARNING')
-    print('shell not closed: need ' + str(fill-N_e)+ ' electrons to fill the state')
-   
-    rho = rho - (fill-N_e)*(phi[:,n,l]/r)**2 /4*np.pi
-    
-plt.plot(r,rho)
+r = np.array([np.array(range(N))*h[i]+h[i] for i in range(4)])
+print(r[0,:])
+density_1 = np.zeros((N,4))
+E_1 = np.zeros(4)
+plt.figure()
+for i in range(4):
+    print(i)
+    density_1[:,i],E_1[i], warn = build_density(V_ext(r[i,:],r_s,N_e[i]), r[i,:],N_e[i])  
+    plt.plot(r[i],density_1[:,i]/rho_b,label='N_e ='+str(N_e[i]))
+plt.axis([-1,15,-1,17.5])
+plt.legend()
+plt.xlabel('radial distance [a_0]')
+plt.ylabel('normalized density $\rho$ /\rho_b')
+plt.title('Na - non interacting electrons density')
+plt.grid(True)
 plt.show()
-
-plt.plot(r,potential)
+print(E_1)
+#%% MAIN￼
+#wiegner radius and othe parameters
+r_s = 4.86
+N_e = np.array([2,8,20,40])
+rho_b = 3/4/np.pi /r_s**3
+R_c = np.array([N_e[i]**(1/3)*r_s for i in range(4)])
+L_max = 4
+n_states = 3
+#mesh
+N = 10**5
+r_max= 3*R_c
+h = r_max/N
+r = np.array([np.array(range(N))*h[i]+h[i] for i in range(4)])
+print(r[0,:])
+density_2 = np.zeros((N,4))
+E_2 = np.zeros(4)
+plt.figure()
+for i in range(4):
+    print(i)
+    density_2[:,i],E_2[i], warn = build_density(V_ext(r[i,:],r_s,N_e[i]), r[i,:],N_e[i])  
+    plt.plot(r[i],density_2[:,i]/rho_b,label='N_e ='+str(N_e[i]))
+plt.axis([-1,15,-1,17.5])
+plt.legend()
+plt.xlabel("radial distance [a_0]")
+plt.ylabel("normalized density $\rho$ /\rho_b")
+plt.title('K - non interacting electrons density')
+plt.grid(True)
 plt.show()
-#%%
+print(E_2)
+#%%￼
