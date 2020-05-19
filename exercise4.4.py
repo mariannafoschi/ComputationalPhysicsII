@@ -95,7 +95,7 @@ def build_density(mesh, potential):
     while fill<N_e:
         l = int(E_sort[k,1])
         n = int(E_sort[k,2])
-        density = density + 2*(2*l+1)*(wf[:,n,l]/mesh)**2 /4*np.pi
+        density = density + 2*(2*l+1)*(wf[:,n,l]/mesh)**2 /4/np.pi
         sum_eig = sum_eig + 2*(2*l+1)*E[n,l]
         fill = fill + 2*(2*l+1)
         k=k+1
@@ -103,7 +103,7 @@ def build_density(mesh, potential):
     if fill>N_e:
         print('WARNING')
         print('shell not closed: need ' + str(fill-N_e)+ ' electrons to fill the state')
-        density = density - (fill-N_e)*(wf[:,n,l]/mesh)**2 /4*np.pi
+        density = density - (fill-N_e)*(wf[:,n,l]/mesh)**2 /4/np.pi
         sum_eig = sum_eig - (fill-N_e)*E[n,l]
         
     return density, sum_eig
