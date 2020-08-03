@@ -211,7 +211,7 @@ N_down = 3 #number of particles with spin down
 num = N_up + N_down
 
 r_init = np.random.rand(2, num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
-delta = 0.8                  # width of movement
+delta = 0.5                  # width of movement
 N_s = 100000                     # number of samples
 cut = 5000
 

@@ -80,8 +80,8 @@ def kinetic_energy(r, A_up, A_down):
     # gradient of last N_minus particles (spin down)
     for l in range(gv.N_down):
         for i in range(gv.N_down):
-                mf_grad[0,gv.N_up+i] = mf_grad[0,gv.N_up+i] + Agradx_down[l,i]*A_inv_down[i,l]    #NOTA GLI INDICI INVERTITI
-                mf_grad[1,gv.N_up+i] = mf_grad[1,gv.N_up+i] + Agrady_down[l,i]*A_inv_down[i,l]
+                mf_grad[0,gv.N_up+l] = mf_grad[0,gv.N_up+l] + Agradx_down[l,i]*A_inv_down[i,l]    #NOTA GLI INDICI INVERTITI
+                mf_grad[1,gv.N_up+l] = mf_grad[1,gv.N_up+l] + Agrady_down[l,i]*A_inv_down[i,l]
     
     
     # laplacian
@@ -95,9 +95,7 @@ def kinetic_energy(r, A_up, A_down):
     kin_en = -1/2*mf_lap
     
     #feenberg energy
-    feenberg_en = 0
-    for i in range(gv.num):
-        feenberg_en = feenberg_en + np.sum(mf_grad[:,i]**2)
+    feenberg_en = np.sum(mf_grad**2)
     feenberg_en = -1/4*(mf_lap-feenberg_en)
     return kin_en, feenberg_en
 
