@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Mon Aug  3 16:48:48 2020
+
+@author: Davide
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Tue Jul 28 15:22:35 2020
 
 @author: Davide
@@ -15,14 +22,11 @@ from numba import jit
 
 #%% FUNCTION DEFINITION
 """ Mean field part """
-def mf_function():
-    return 0
-
-@jit(nopython=True)
-def eval_mf_matrix(r, n, levels, omega_var):
+@jit(nopython=True)    
+def eval_mf_matrix(r, n, levels):
     """ Calculates the matrix with mf functions evaluated in a certain point r """
     temp = np.zeros((n,n))
-    a_0 = 1/omega_var
+    a_0 = 1/omega
     # fill the first level (always occupied)
     for i in range(n):
         temp[i,0] = np.exp(-np.sum(r[:,i]**2)/2/a_0)
@@ -35,16 +39,16 @@ def eval_mf_matrix(r, n, levels, omega_var):
             elif levels[i] == 2:
                 for j in range(n):
                     temp[j,i] = r[1,j] * np.exp(-np.sum(r[:,j]**2)/2/a_0)
-    return temp
+    return temp.reshape((n,n))
 
-@jit(nopython=True)        
-def eval_mf_matrix_grad(r, n, levels, omega_var):
+@jit(nopython=True)            
+def eval_mf_matrix_grad(r, n, levels):
     """ Calculates the gradient matrices of mf functions evaluated in a certain point r """
     temp_gradx = np.zeros((n,n))
     temp_grady = np.zeros((n,n))
     temp_grad2x = np.zeros((n,n))
     temp_grad2y = np.zeros((n,n))
-    a_0 = 1/omega_var
+    a_0 = 1/omega
 
     # fill the first level (always occupied)
     for i in range(n):
@@ -70,8 +74,8 @@ def eval_mf_matrix_grad(r, n, levels, omega_var):
 
 
 # EVERYTHING THAT HAS TO DO WITH ENERGY
-@jit(nopython=True)
-def kinetic_energy(r, A_up, A_down, omega_var):
+@jit(nopython=True)    
+def kinetic_energy(r, A_up, A_down):
     """ Calculates the local kinetic energy
         Inputs:
             r = position of which you want to calculate the local kinetic energy.
@@ -83,9 +87,9 @@ def kinetic_energy(r, A_up, A_down, omega_var):
     # Mean field part (N=2)
     mf_grad = np.zeros((2,num))
     mf_lap = 0
-    [Agradx_up, Agrady_up, Agrad2x_up, Agrad2y_up] = eval_mf_matrix_grad(r[:,:N_up], N_up, [0,1,2], omega_var)
+    [Agradx_up, Agrady_up, Agrad2x_up, Agrad2y_up] = eval_mf_matrix_grad(r[:,:N_up], N_up, [0,1,2])
     A_inv_up = np.linalg.inv(A_up)   # inverse of matrix A (useful for calculating gradient)
-    [Agradx_down, Agrady_down, Agrad2x_down, Agrad2y_down] = eval_mf_matrix_grad(r[:,N_up:], N_down, [0,1,2], omega_var)
+    [Agradx_down, Agrady_down, Agrad2x_down, Agrad2y_down] = eval_mf_matrix_grad(r[:,N_up:], N_down, [0,1,2])
     A_inv_down = np.linalg.inv(A_down)   # inverse of matrix A (useful for calculating gradient)
     
     # gradient of first N_plus particles (spin up)
@@ -118,40 +122,36 @@ def kinetic_energy(r, A_up, A_down, omega_var):
     return kin_en, feenberg_en
 
 
-@jit(nopython=True)
+@jit(nopython=True)    
 def potential_energy(r):
-    pot_temp = 0
-    for i in range(num):
-        pot_temp = pot_temp + 1/2 * omega**2 * np.sum(r[:,i]**2)
-    return pot_temp
+    return 1/2 * omega**2 * np.sum(r**2)
     
 
 
 
-@jit(nopython=True)
-def density(r, omega_var):
+@jit(nopython=True)    
+def density(r):
     """ Return the probability density of point r.
         Inputs:
             b = parameters of the Jastrow factors
             r = point of which we want the probability density """
-    A_up = eval_mf_matrix(r[:,:N_up], N_up, [0,1,2], omega_var) 
-    A_down = eval_mf_matrix(r[:,N_up:], N_down, [0,1,2], omega_var)
+    A_up = eval_mf_matrix(r[:,:N_up], N_up, [0,1,2]) 
+    A_down = eval_mf_matrix(r[:,N_up:], N_down, [0,1,2])
     #print(np.shape(A_up), np.shape(A_down))
     psi = np.linalg.det(A_up) * np.linalg.det(A_down)
     return psi**2, A_up, A_down
 
-@jit(nopython=True)
+@jit(nopython=True)    
 def generate_pos(r, delta, mode):
     new_r = np.zeros(np.shape(r))
     if mode==1:
-        for i in range(num):
-            for j in range(2):
-                new_r[j,i] = r[j,i] + (random.random()-1/2)*delta
-    # elif mode==2:
+        new_r = r + (np.random.rand(2, num)-1/2)*delta
+#    elif mode==2:
+#        return 0
     return new_r
 
-@jit(nopython=True)    
-def sampling_function(r, delta, N_s, mode, cut, omega_var):
+@jit(nopython=True)        
+def sampling_function(r, delta, N_s, mode, cut):
     """ This function performs Metropolis algorithm: it samples "num" points from distribution "p" using mode "mode".
         Inputs:
             r = matrix with all initial positions: each column represent a particle [x; y; z]
@@ -167,9 +167,9 @@ def sampling_function(r, delta, N_s, mode, cut, omega_var):
     kin_energy = np.zeros(N_s)
     feenberg_energy = np.zeros(N_s)
     
-    prev_density, A_up, A_down = density(r, omega_var)
+    prev_density, A_up, A_down = density(r)
     pos[:,:,0] = r
-    kin_energy[0], feenberg_energy[0] = kinetic_energy(r, A_up, A_down, omega_var)
+    kin_energy[0], feenberg_energy[0] = kinetic_energy(r, A_up, A_down)
     pot_energy[0] = potential_energy(r)
     count = count + 1
     
@@ -179,12 +179,12 @@ def sampling_function(r, delta, N_s, mode, cut, omega_var):
             if n%10000 == 0:
                 print(n/10000)
             pos_temp = generate_pos(pos[:,:,n-1], delta, mode)
-            new_density, A_up, A_down = density(pos_temp, omega_var)
+            new_density, A_up, A_down = density(pos_temp)
             w = new_density/prev_density   # VEDI COMMENTO QUADERNO, PUO ESSERE IMPORTANTE
-            if random.random() < w:
+            if random.random() <= w:
                 pos[:,:,n] = pos_temp
                 pot_energy[n] = potential_energy(pos_temp)
-                kin_energy[n], feenberg_energy[n] = kinetic_energy(pos_temp, A_up, A_down, omega_var)
+                kin_energy[n], feenberg_energy[n] = kinetic_energy(pos_temp, A_up, A_down)
                 prev_density = new_density
                 count = count + 1
             else:
@@ -195,37 +195,25 @@ def sampling_function(r, delta, N_s, mode, cut, omega_var):
             n = n + 1
 #    elif mode==2:
 #        return 0
-    #print(omega_var)
     print("Accepted steps (%):")
     print(count/N_s*100)
-    return pot_energy[cut:], kin_energy[cut:], feenberg_energy[cut:]
+    return pos[:,:,cut:], pot_energy[cut:], kin_energy[cut:], feenberg_energy[cut:]
 
 #%% MAIN PARAMETERS DEFINITION
 # for unit conversion at the end
 hartree = 11.86 #meV
 bohr_radius = 9.793 #nm
 
-omega = 1
+omega = 1.000
 N_up = 3 # number of particles with spin up
 N_down = 3 #number of particles with spin down
 num = N_up + N_down
 
 r_init = np.random.rand(2, num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
 delta = 0.8                  # width of movement
-N_s = 100000                     # number of samples
-cut = 5000
-
-max_omega = 1.10
-min_omega = 0.90
-N_omega = 20
-omega_var = np.arange(min_omega,max_omega, (max_omega-min_omega)/N_omega)
-
-pot_energy = np.zeros((N_s-cut, N_omega))
-kin_energy = np.zeros((N_s-cut, N_omega))
-feenberg_energy = np.zeros((N_s-cut, N_omega))
-
-for i in range(N_omega):
-    pot_energy[:,i], kin_energy[:,i], feenberg_energy[:,i] = sampling_function(r_init, delta, N_s, 1, cut, omega_var[i])
+N_s = 1000000                     # number of samples
+cut = 3000
+samples, pot_energy, kin_energy, feenberg_energy = sampling_function(r_init, delta, N_s, 1, cut)
 
 
 
@@ -233,33 +221,32 @@ for i in range(N_omega):
 
 tot_energy = pot_energy + kin_energy
 tot_energy_feenberg = pot_energy + feenberg_energy
-fin_energy = np.sum(tot_energy, axis=0)/(N_s - cut)
-fin_energy_feenberg = np.sum(tot_energy_feenberg/(N_s - cut), axis=0)
-fin_error = np.sqrt(1/(N_s - cut - 1))*np.sqrt(1/(N_s - cut)*np.sum(tot_energy**2, axis = 0) - (1/(N_s - cut)*np.sum(tot_energy))**2, axis=0) # il primo fattore moltiplica tutto vero?
-fin_error_feenberg = np.sqrt(1/(N_s - cut - 1))*np.sqrt(np.sum(tot_energy_feenberg**2/(N_s - cut), axis=0) - np.sum(tot_energy_feenberg/(N_s - cut), axis=0)**2) # il primo fattore moltiplica tutto vero?
-#print("Ground state energy +- 3 sigma=\n" + str(fin_energy/omega) + " x omega"+ "+-" + str(3 * fin_error) + "\n")
-#print("Ground state energy con feenberg +- 3 sigma=" + str(fin_energy_feenberg/omega) + " x omega"+ "+-" + str(3 * fin_error_feenberg))
+fin_energy = sum(tot_energy/(N_s - cut))
+fin_energy_feenberg = sum(tot_energy_feenberg/(N_s - cut))
+fin_error = np.sqrt(1/(N_s - cut - 1))*np.sqrt(sum(tot_energy**2/(N_s - cut)) - sum(tot_energy/(N_s - cut))**2) # il primo fattore moltiplica tutto vero?
+fin_error_feenberg = np.sqrt(1/(N_s - cut - 1))*np.sqrt(sum(tot_energy_feenberg**2/(N_s - cut)) - sum(tot_energy_feenberg/(N_s - cut))**2) # il primo fattore moltiplica tutto vero?
+print("Ground state energy +- 3 sigma=\n" + str(fin_energy/omega) + " x omega"+ "+-" + str(3 * fin_error) + "\n")
+print("Ground state energy con feenberg +- 3 sigma=\n" + str(fin_energy_feenberg/omega) + " x omega"+ "+-" + str(3 * fin_error_feenberg))
 
 # Non cancellare (da capire)
-#print(np.sqrt(1/(N_s - cut - 1))*np.sqrt(1/(N_s - cut)*sum(tot_energy**2) - (1/(N_s - cut)*sum(tot_energy))**2)) 
-#print(np.sqrt(1/(N_s - cut - 1))*np.sqrt(1/(N_s - cut)*sum(tot_energy_feenberg**2) - (1/(N_s - cut)*sum(tot_energy_feenberg))**2))
+print(np.sqrt(1/(N_s - cut - 1))*np.sqrt(1/(N_s - cut)*sum(tot_energy**2) - (1/(N_s - cut)*sum(tot_energy))**2)) 
+print(np.sqrt(1/(N_s - cut - 1))*np.sqrt(1/(N_s - cut)*sum(tot_energy_feenberg**2) - (1/(N_s - cut)*sum(tot_energy_feenberg))**2))
 
 
 
 #%% PLOT
+plt.hist(samples[0,0,:], bins=50, density= True)
+#xx = (np.arange(1000)-500)/100
+#plt.plot(xx, 1/np.sqrt(np.pi)*np.exp(-(xx)**2) + 2*xx**2/np.sqrt(np.pi)*np.exp(-(xx)**2))
 
-##correlation between kinetic and potential energy
-#plt.figure()
-#plt.plot(kin_energy, label="Kinetic energy")
-#plt.plot(pot_energy, label = "Potential energy")
-#plt.plot(kin_energy + pot_energy)
-#plt.legend()
-#
-## difference between kinetic and feenberg energy
-#plt.figure()
-#plt.plot(kin_energy-feenberg_energy)
+#%%
+#correlation between kinetic and potential energy
+plt.figure()
+plt.plot(kin_energy, label="Kinetic energy")
+plt.plot(pot_energy, label = "Potential energy")
+plt.plot(kin_energy + pot_energy)
+plt.legend()
 
-# plot of energy for different
-plt.figure(1)
-for i in range(N_omega):
-    plt.errorbar(omega_var, fin_energy, 3*fin_error, elinewidth = 0.7, ecolor = "red", capsize = 5, capthick = 0.7)
+# difference between kinetic and feenberg energy
+plt.figure()
+plt.plot(kin_energy-feenberg_energy)
