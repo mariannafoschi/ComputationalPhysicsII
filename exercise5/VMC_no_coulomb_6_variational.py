@@ -96,8 +96,8 @@ def kinetic_energy(r, A_up, A_down, omega_var):
     # gradient of last N_minus particles (spin down)
     for l in range(N_down):
         for i in range(N_down):
-                mf_grad[0,N_up+i] = mf_grad[0,N_up+i] + Agradx_down[l,i]*A_inv_down[i,l]    #NOTA GLI INDICI INVERTITI
-                mf_grad[1,N_up+i] = mf_grad[1,N_up+i] + Agrady_down[l,i]*A_inv_down[i,l]
+                mf_grad[0,N_up+l] = mf_grad[0,N_up+l] + Agradx_down[l,i]*A_inv_down[i,l]    #NOTA GLI INDICI INVERTITI
+                mf_grad[1,N_up+l] = mf_grad[1,N_up+l] + Agrady_down[l,i]*A_inv_down[i,l]
     
     
     # laplacian
@@ -211,7 +211,7 @@ N_down = 3 #number of particles with spin down
 num = N_up + N_down
 
 r_init = np.random.rand(2, num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
-delta = 0.5                  # width of movement
+delta = 0.8                  # width of movement
 N_s = 100000                     # number of samples
 cut = 5000
 
@@ -233,12 +233,12 @@ for i in range(N_omega):
 
 tot_energy = pot_energy + kin_energy
 tot_energy_feenberg = pot_energy + feenberg_energy
-fin_energy = np.sum(tot_energy/(N_s - cut), axis=0)
+fin_energy = np.sum(tot_energy, axis=0)/(N_s - cut)
 fin_energy_feenberg = np.sum(tot_energy_feenberg/(N_s - cut), axis=0)
-fin_error = np.sqrt(1/(N_s - cut - 1))*np.sqrt(np.sum(tot_energy**2/(N_s - cut), axis=0) - np.sum(tot_energy/(N_s - cut), axis=0)**2) # il primo fattore moltiplica tutto vero?
+fin_error = np.sqrt(1/(N_s - cut - 1))*np.sqrt(1/(N_s - cut)*np.sum(tot_energy**2, axis = 0) - (1/(N_s - cut)*np.sum(tot_energy))**2, axis=0) # il primo fattore moltiplica tutto vero?
 fin_error_feenberg = np.sqrt(1/(N_s - cut - 1))*np.sqrt(np.sum(tot_energy_feenberg**2/(N_s - cut), axis=0) - np.sum(tot_energy_feenberg/(N_s - cut), axis=0)**2) # il primo fattore moltiplica tutto vero?
 #print("Ground state energy +- 3 sigma=\n" + str(fin_energy/omega) + " x omega"+ "+-" + str(3 * fin_error) + "\n")
-#print("Ground state energy con feenberg +- 3 sigma=" + str(fin_energy_feenberg/omega) + " x omega"+ "+-" + str(3 * fin_error_feenberg))
+print("Ground state energy con feenberg +- 3 sigma=" + str(fin_energy_feenberg/omega) + " x omega"+ "+-" + str(3 * fin_error_feenberg))
 
 # Non cancellare (da capire)
 #print(np.sqrt(1/(N_s - cut - 1))*np.sqrt(1/(N_s - cut)*sum(tot_energy**2) - (1/(N_s - cut)*sum(tot_energy))**2)) 
@@ -260,6 +260,6 @@ fin_error_feenberg = np.sqrt(1/(N_s - cut - 1))*np.sqrt(np.sum(tot_energy_feenbe
 #plt.plot(kin_energy-feenberg_energy)
 
 # plot of energy for different
-plt.figure()
+plt.figure(1)
 for i in range(N_omega):
     plt.errorbar(omega_var, fin_energy, 3*fin_error, elinewidth = 0.7, ecolor = "red", capsize = 5, capthick = 0.7)
