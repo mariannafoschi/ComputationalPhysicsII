@@ -142,13 +142,26 @@ r_max= 2.5*R_c
 h = r_max/N
 r = np.array(range(N))*h +h
 
+<<<<<<< Updated upstream
 # CREATE ANSATZ DENSITY IN n_states v ext OUT rho
+=======
+# Define variables for the different number of shells that we consider
+Nee = np.array([8, 20, 40])
+densities = np.zeros((N,len(Nee)))
+E_fin = np.zeros(len(Nee))
+#E_fin2 = np.zeros(len(Nee))
+deltaN = np.zeros(len(Nee))
+polariz = np.zeros(len(Nee))
+
+# %% CYCLE OVER SHELLS ---> SELF CONSISTENT PROCEDURE 
+>>>>>>> Stashed changes
 # ----------------------------------------------------------------------------
 basic_pot = V_ext(r)
 rho, sum_mu = build_density(r,basic_pot)
 plt.plot(r,rho)
 plt.show() 
 
+<<<<<<< Updated upstream
 # %% START SELF CONSISTENT PROCEDURE
 # ----------------------------------------------------------------------------
 energy = 0
@@ -229,5 +242,116 @@ plt.show()
 >>>>>>> Stashed changes
     
 
+=======
+# Cycle over the number of shells considered
+for j in range(len(Nee)):
+    k=0
+    N_e = Nee[j]
+    rho_b = 3/4/np.pi /r_s**3
+    R_c = N_e**(1/3)*r_s
+    
+    # define initial density
+    rho = 1/(1+np.exp(1*(r-R_c)))
+    norm = h*sum(rho*r**2)*4*np.pi
+    rho = N_e* rho/norm
+    
+    # initialise energy variables for self consistent procedure
+    energy = 0
+    energy_previous = 0
+    energy_diff = 2*acc
+    v_ext = V_ext(r)
+    potential_previous = v_ext
+    
+    # self consistent procedure
+    while energy_diff > acc and k<10000:
+        
+        # calculate total potential (dependent on density)
+        potential_new = v_ext + V_int(r, rho) + V_xc( rho)
+        #print(V_int(r,rho)[-1]/v_ext[-1])
+        plot=0
+        if plot ==1:
+            plt.plot(r,v_ext,color='b')
+            plt.plot(r,V_int(r, rho),color='g')
+            plt.plot(r,V_int(r, rho)-V_xc(rho),color='k')
+    
+            plt.plot(r,V_xc(rho),color='r')
+            plt.show()
+        
+        tot_pot = (1-alpha)*potential_previous + alpha*potential_new
+        
+        # solve KS equation and calculate density and the sum of the energy eigenvalues mu
+        if plot ==1:
+            plt.plot(r,rho)
+            
+        rho, sum_mu,warn = build_density(tot_pot, r)
+    
+        if plot ==1:
+           plt.plot(r,rho)
+           plt.show()
+        
+        # compute energy
+        erres = (3/(4*np.pi*rho))**(1/3)
+        energy = sum_mu - 0.5*weighted_integ(V_int(r,rho), rho) - weighted_integ(V_xc(rho), rho) + weighted_integ(-3/4*(3/np.pi)**(1/3)*rho**(1/3), rho) + weighted_integ(gamma/(1+beta1*np.sqrt(erres)+beta2*erres), rho)
+        energy_diff = np.abs(energy - energy_previous)
+        
+        # save values of previous iteration
+        energy_previous = energy
+        potential_previous = tot_pot
+        
+        k=k+1
+        print(k)
+        #print(energy)
+    print(energy)
+    
+    E_fin[j] = energy
+    densities[:,j] = rho   
+    
+    # alternative energy
+    #e_kin = E_kin(r,tot_pot,j) 
+    #E_fin2[j] = e_kin + weighted_integ(v_ext, rho) + 0.5*weighted_integ(V_int(r,rho), rho) + weighted_integ(-3/4*(3/np.pi)**(1/3)*rho**(1/3), rho) + weighted_integ(gamma/(1+beta1*np.sqrt(erres)+beta2*erres), rho)
+  
+    
+    # polarizability
+    ii=0
+    while r[ii] < R_c:
+        ii = ii + 1
+    deltaN[j] = 4*np.pi*h*np.dot(r[ii:]**2,rho[ii:]) - 0.5*h*4*np.pi*r[-1]**2*rho[-1]
+    polariz[j] = R_c**3*(1+deltaN[j]/N_e)
+    
+    # Plot del potenziale efficace
+    if j>0:
+        plt.plot(r,potential_previous,label='N ='+str(Nee[j]))
+        plt.legend()
+ax = plt.gca()
+ax.legend()
+plt.ylabel('effective potential [H]')
+plt.xlabel('radial distance [a_0]')
+plt.grid('True')
+plt.show()
+
+# PLOT DENSITY
+# %%----------------------------------------------------------------------------   
+for i in range(3):
+    plt.plot(r,densities[:,i]/rho_b,label='N ='+str(Nee[i]))
+    plt.legend()
+    #plt.show()
+ax = plt.gca()
+ax.legend()
+plt.ylabel('normalized density ρ/ρ_b')
+plt.xlabel('radial distance [a_0]')
+plt.grid('True')
+plt.show()
+#plt.plot(r,tot_pot)
+#plt.show()
+
+#%%
+R_cc = np.array([Nee[i]**(1/3) for i in range(len(Nee))])*r_s
+E_fin = E_fin + 3/5 *np.array(Nee)**2 /R_cc
+print("Energy per particle in H: ", E_fin/Nee)
+print("Energy per particle in eV: ", E_fin/Nee*27.2)
+    
+#%%
+#E_fin2 = E_fin2 + 3/5 *np.array(Nee)**2 /R_cc
+>>>>>>> Stashed changes
 
 
