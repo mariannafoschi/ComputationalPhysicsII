@@ -69,7 +69,7 @@ def jastrow_function(b, r):
     out = 0
     for i in range(num):
         for j in np.arange(i+1, num):
-             -1/2 * a_param[i,j] * np.sqrt(sum(r[:,i]-r[:,j])* (r[:,i]-r[:,j])) / ( 1 + b[i,j] *np.sqrt(sum(r[:,i]-r[:,j])* (r[:,i]-r[:,j])) )
+             -1/2 * a_param[i,j] * np.sqrt(np.sum(r[:,i]-r[:,j])* (r[:,i]-r[:,j])) / ( 1 + b[i,j] *np.sqrt(np.sum(r[:,i]-r[:,j])* (r[:,i]-r[:,j])) )
     return np.exp(out)
 
 def Udiff(b, r, l, i):
