@@ -25,13 +25,18 @@ import global_variables as gv
 temp_omega = 1
 temp_N_up = 3
 temp_N_down = 3
-gv.initialize_variables(temp_omega, temp_N_up, temp_N_down)
+temp_L4 = 0
+
+gv.initialize_variables(temp_omega, temp_N_up, temp_N_down,temp_L4)
+gv.occ_levels(temp_L4)
 
 r_init = np.random.rand(2, gv.num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
 delta = 1                  # width of movement
 N_s = 10**6                     # number of samples
 cut = 10**3
-samples, pot_energy, kin_energy, feenberg_energy = my.sampling_function(r_init, delta, N_s, 1, cut)
+
+b= np.zeros((gv.num,gv.num))
+samples, pot_energy, kin_energy, feenberg_energy = my.sampling_function(r_init, delta, N_s, 1, cut,b)
 
 
 
