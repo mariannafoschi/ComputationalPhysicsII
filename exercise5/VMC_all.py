@@ -214,12 +214,12 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
         mf_U_grad2 = np.sum(Ugrad[0,:]*mf2_grad[0,:]+Ugrad[1,:]*mf2_grad[1,:])
     
         #summing the contributions
-        kin_en = -1/2*mf2_lap -1/2*Ulap -  mf_U_grad2
+        kin_en = -1/2*mf2_lap #-1/2*Ulap -  mf_U_grad2
         
         #feenberg energy        SOLO SE usiamo la funzione senza jastrow?
         feenberg_en = np.sum((mf2_grad+Ugrad)**2)
         
-    return kin_en
+    return kin_en,feenberg_en
 
 """ Jastrow factor part """
 @jit(nopython=True)
@@ -289,8 +289,7 @@ def generate_pos(r, delta, mode):
 #    elif mode==2
 #        return 0
     return new_r
-
-@jit(nopython=True)  
+  
 def sampling_function(r, delta, N_s, mode, cut,b):
     """ This function performs Metropolis algorithm: it samples "num" points from distribution "p" using mode "mode".
         Inputs:
@@ -313,26 +312,24 @@ def sampling_function(r, delta, N_s, mode, cut,b):
     pot_energy[0] = potential_energy(r)
     count = count + 1
     
-    if mode==True:
-        n = 1
-        while n < N_s:
-            if n%10000 == 0:
-                print(n/10000)
-            pos_temp = generate_pos(pos[:,:,n-1], delta, mode)
-            new_density, A_up, A_down,det_mf = density(pos_temp,b)
-            w = new_density/prev_density   # VEDI COMMENTO QUADERNO, PUO ESSERE IMPORTANTE
-            if np.random.rand(1) <= w:
-                pos[:,:,n] = pos_temp
-                pot_energy[n] = potential_energy(pos_temp)
-                kin_energy[n], feenberg_energy[n] = kinetic_energy(pos_temp, A_up, A_down,det_mf,b)
-                prev_density = new_density
-                count = count + 1
-            else:
-                pos[:,:,n] = pos[:,:,n-1]
-                pot_energy[n] = pot_energy[n-1]
-                kin_energy[n] = kin_energy[n-1]
-                feenberg_energy[n] = feenberg_energy[n-1]
-            n = n + 1
+    for n in np.arange(1, N_s):       
+        
+        pos_temp = generate_pos(pos[:,:,n-1], delta, mode)
+        new_density, A_up, A_down,det_mf = density(pos_temp,b)
+        w = new_density/prev_density   # VEDI COMMENTO QUADERNO, PUO ESSERE IMPORTANTE
+        temp = np.random.rand(1)
+        if temp <= w:
+            pos[:,:,n] = pos_temp
+            pot_energy[n]= potential_energy(pos_temp)
+            kin_energy[n], feenberg_energy[n] = kinetic_energy(pos_temp, A_up, A_down,det_mf,b)
+            prev_density = new_density
+            count = count + 1
+        else:
+            pos[:,:,n] = pos[:,:,n-1]
+            pot_energy[n] = pot_energy[n-1]
+            kin_energy[n] = kin_energy[n-1]
+            feenberg_energy[n] = feenberg_energy[n-1]
+        
 #    elif mode==2:
 #        return 0
     #print("Accepted steps (%):")
@@ -349,10 +346,11 @@ def initialize_variables(temp_omega, temp_N_up, temp_N_down, temp_L4):
     num = N_up + N_down
     L4 = temp_L4 #angular momentum state when num=4, can be 0 (l=0,S=0) 1 (l=0,S=1) 2 (l=2,S=0)
     a_param = np.zeros((num,num))  # jasstrow factor parameter
-    a_param[:N_up,:N_up] = np.ones((N_up,N_up))*2. # up-up
-    a_param[:N_up,N_up:] = np.ones((N_up,N_down))*3. # up-down
-    a_param[N_up:,:N_up] = np.ones((N_down,N_up))*3. # down-up
-    a_param[N_up:,N_up:] = np.ones((N_down,N_down))*2. # down-down
+    a_param[:N_up,:N_up] = -np.ones((N_up,N_up))*2/3. # up-up
+    a_param[:N_up,N_up:] = -np.ones((N_up,N_down))*2. # up-down
+    a_param[N_up:,:N_up] = -np.ones((N_down,N_up))*2. # down-up
+    a_param[N_up:,N_up:] = -np.ones((N_down,N_down))*2/3. # down-down
+    a_param = np.zeros((num,num))
     
 def occ_levels(L4):
     global level_up, level_down, num_det
@@ -371,7 +369,7 @@ def occ_levels(L4):
             num_det = 2
         if L4 == 1:
             level_up =np.transpose( np.array([[0,1,2]]))
-            level_down = np.ones((1))*0
+            level_down = np.ones((1,1))*0
             num_det = 1
         if L4 == 2:
             level_up = np.transpose(np.array([[0,1],[0,2]]))
@@ -385,23 +383,33 @@ def occ_levels(L4):
         level_up = np.transpose(np.array([[0,1,2]]))
         level_down = level_up
         num_det = 1
+
+    level_up = np.int_(level_up)
+    level_down = np.int_(level_down)
     
     #%% MAIN PARAMETERS DEFINITION
 temp_omega = 1
-temp_N_up = 1
+temp_N_up = 2
 temp_N_down = 1
-temp_L4 = 0
+temp_L4 = 1
 
 initialize_variables(temp_omega, temp_N_up, temp_N_down,temp_L4)
 occ_levels(temp_L4)
 
 r_init = np.random.rand(2, num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
 delta = 1.                  # width of movement
-N_s = 10**4                   # number of samples
+N_s = 10**5                   # number of samples
 cut = 10**3
-mode = True
+mode = 1
 b= np.zeros((num,num))
 t_in = time.time()
 samples, pot_energy, kin_energy, feenberg_energy = sampling_function(r_init, delta, N_s, mode, cut,b)
 t_fin= time.time()
 print(t_fin-t_in)
+
+
+#%%
+energy = np.mean(pot_energy+kin_energy)
+energy_err = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy)**2)-energy**2)
+print('energy =', energy, '+-',energy_err)
+
