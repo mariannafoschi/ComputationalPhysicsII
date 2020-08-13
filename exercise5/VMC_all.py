@@ -1,7 +1,7 @@
 
 from numba import jit
 import numpy as np
-
+import time
 #%% FUNCTION DEFINITION
 """ Mean field part """
 
@@ -67,31 +67,31 @@ def kinetic_energy_nojastrow(r, A_up, A_down):
     """
     
     # Mean field part (N=2)
-    mf_grad = np.zeros((2,gv.num))
+    mf_grad = np.zeros((2,num))
     mf_lap = 0
-    [Agradx_up, Agrady_up, Agrad2x_up, Agrad2y_up] = eval_mf_matrix_grad(r[:,:gv.N_up], gv.N_up, [0,1,2])
+    [Agradx_up, Agrady_up, Agrad2x_up, Agrad2y_up] = eval_mf_matrix_grad(r[:,:,N_up], N_up, [0,1,2])
     A_inv_up = np.linalg.inv(A_up)   # inverse of matrix A (useful for calculating gradient)
-    [Agradx_down, Agrady_down, Agrad2x_down, Agrad2y_down] = eval_mf_matrix_grad(r[:,gv.N_up:], gv.N_down, [0,1,2])
+    [Agradx_down, Agrady_down, Agrad2x_down, Agrad2y_down] = eval_mf_matrix_grad(r[:,N_up:], N_down, [0,1,2])
     A_inv_down = np.linalg.inv(A_down)   # inverse of matrix A (useful for calculating gradient)
     
     # gradient of first N_plus particles (spin up)
-    for l in range(gv.N_up):
-        for i in range(gv.N_up):
+    for l in range(N_up):
+        for i in range(N_up):
                 mf_grad[0,l] = mf_grad[0,l] + Agradx_up[l,i]*A_inv_up[i,l]
                 mf_grad[1,l] = mf_grad[1,l] + Agrady_up[l,i]*A_inv_up[i,l]
     # gradient of last N_minus particles (spin down)
-    for l in range(gv.N_down):
-        for i in range(gv.N_down):
-                mf_grad[0,gv.N_up+l] = mf_grad[0,gv.N_up+l] + Agradx_down[l,i]*A_inv_down[i,l]    #NOTA GLI INDICI INVERTITI
-                mf_grad[1,gv.N_up+l] = mf_grad[1,gv.N_up+l] + Agrady_down[l,i]*A_inv_down[i,l]
+    for l in range(N_down):
+        for i in range(N_down):
+                mf_grad[0,N_up+l] = mf_grad[0,N_up+l] + Agradx_down[l,i]*A_inv_down[i,l]    #NOTA GLI INDICI INVERTITI
+                mf_grad[1,N_up+l] = mf_grad[1,N_up+l] + Agrady_down[l,i]*A_inv_down[i,l]
     
     
     # laplacian
-    for l in range(gv.N_up):
-        for i in range(gv.N_up):
+    for l in range(N_up):
+        for i in range(N_up):
             mf_lap = mf_lap + Agrad2x_up[l,i]*A_inv_up[i,l] + Agrad2y_up[l,i]*A_inv_up[i,l]
-    for l in range(gv.N_down):
-        for i in range(gv.N_down):
+    for l in range(N_down):
+        for i in range(N_down):
             mf_lap = mf_lap + Agrad2x_down[l,i]*A_inv_down[i,l] + Agrad2y_down[l,i]*A_inv_down[i,l]
         
     kin_en = -1/2*mf_lap
@@ -132,7 +132,7 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
     [Agradx_down[:,:,0], Agrady_down[:,:,0], Agrad2x_down[:,:,0], Agrad2y_down[:,:,0]] = eval_mf_matrix_grad(r[:,N_up:], N_down, level_down[:,0])
     A_inv_down[:,:,0] = np.linalg.inv(A_down[:,:,0])   # inverse of matrix A (useful for calculating gradient)
     
-    if gv.num_det==2:
+    if num_det==2:
             [Agradx_up[:,:,1], Agrady_up[:,:,1], Agrad2x_up[:,:,1], Agrad2y_up[:,:,1]] = eval_mf_matrix_grad(r[:,:N_up], N_up, level_up[:,1])
             A_inv_up[:,:,1] = np.linalg.inv(A_up[:,:,1])   # inverse of matrix A (useful for calculating gradient)
             [Agradx_down[:,:,1], Agrady_down[:,:,1], Agrad2x_down[:,:,1], Agrad2y_down[:,:,1]] = eval_mf_matrix_grad(r[:,N_up:], N_down, level_down[:,1])
@@ -197,12 +197,13 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
         kin_en = -1/2*mf_lap -1/2*Ulap -  mf_U_grad2
     
         #feenberg energy        SOLO SE usiamo la funzione senza jastrow?
-        feenberg_en = np.sum(np.sum(mf_grad[:,:,0]**2,axis=0))
-        feenberg_en = -1/4*(mf_lap-feenberg_en)
+        #feenberg_en = np.sum(np.sum(mf_grad[:,:,0]**2,axis=0))
+        #feenberg_en = -1/4*(mf_lap-feenberg_en)
 #       return kin_en, feenberg_en
     
-        feenberg_en = np.sum((Ugrad +mf_grad[:,:,0])**2)
-        feenberg_en = -1/4*(mf_lap-feenberg_en)
+        #feenberg_en = np.sum(np.sum((Ugrad +mf_grad[:,:,0])**2,axis=0))
+        #feenberg_en = -1/4*(mf_lap-feenberg_en)
+        feenberg_en = 0
     if num_det==2 :
         mf2_grad= np.zeros((2,num))
         mf2_grad[0,:] = mf_grad[0,:,0]/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0]) + mf_grad[0,:,1]/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1])
@@ -218,7 +219,7 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
         #feenberg energy        SOLO SE usiamo la funzione senza jastrow?
         feenberg_en = np.sum((mf2_grad+Ugrad)**2)
         
-    return kin_en, feenberg_en
+    return kin_en
 
 """ Jastrow factor part """
 @jit(nopython=True)
@@ -259,7 +260,7 @@ def density(r,b):
     
     A_up[:,:,0] = eval_mf_matrix(r[:,:N_up], N_up, level_up[:,0])
     A_down[:,:,0] = eval_mf_matrix(r[:,N_up:], N_down, level_down[:,0])    
-    if gv.num_det ==2 :
+    if num_det ==2 :
         A_up[:,:,1] = eval_mf_matrix(r[:,:N_up], N_up, level_up[:,1])
         A_down[:,:,1] = eval_mf_matrix(r[:,N_up:], N_down, level_down[:,1])
     
@@ -312,7 +313,7 @@ def sampling_function(r, delta, N_s, mode, cut,b):
     pot_energy[0] = potential_energy(r)
     count = count + 1
     
-    if mode==1:
+    if mode==True:
         n = 1
         while n < N_s:
             if n%10000 == 0:
@@ -387,20 +388,20 @@ def occ_levels(L4):
     
     #%% MAIN PARAMETERS DEFINITION
 temp_omega = 1
-temp_N_up = 3
-temp_N_down = 3
+temp_N_up = 1
+temp_N_down = 1
 temp_L4 = 0
 
 initialize_variables(temp_omega, temp_N_up, temp_N_down,temp_L4)
 occ_levels(temp_L4)
 
-r_init = np.random.rand(2, gv.num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
-delta = 1                  # width of movement
+r_init = np.random.rand(2, num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
+delta = 1.                  # width of movement
 N_s = 10**4                   # number of samples
 cut = 10**3
-
-b= np.zeros((gv.num,gv.num))
+mode = True
+b= np.zeros((num,num))
 t_in = time.time()
-samples, pot_energy, kin_energy, feenberg_energy = sampling_function(r_init, delta, N_s, 1, cut,b)
+samples, pot_energy, kin_energy, feenberg_energy = sampling_function(r_init, delta, N_s, mode, cut,b)
 t_fin= time.time()
 print(t_fin-t_in)
