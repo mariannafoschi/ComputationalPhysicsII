@@ -1,26 +1,26 @@
-import global_variables as gv
+
 from numba import jit
 import numpy as np
 
 #%% FUNCTION DEFINITION
 """ Mean field part """
 
-@jit(nopython=True) 
+@jit(nopython=True)
 def eval_mf_matrix(r, n, levels):
     """ Calculates the matrix with mf functions evaluated in a certain point r """
     temp = np.zeros((n,n))
-    a_0 = 1/gv.omega
+    a_0 = 1/omega
     # fill the first level (always occupied)
-    for i in range(n):
+    for i in np.arange(n):
         temp[i,0] = np.exp(-np.sum(r[:,i]**2)/2/a_0)
     # fill other levels
     if n > 1:
         for i in np.arange(n-1)+1:
             if levels[i] == 1:
-                for j in range(n):
+                for j in np.arange(n):
                     temp[j,i] = r[0,j] * np.exp(-np.sum(r[:,j]**2)/2/a_0)
             elif levels[i] == 2:
-                for j in range(n):
+                for j in np.arange(n):
                     temp[j,i] = r[1,j] * np.exp(-np.sum(r[:,j]**2)/2/a_0)
     return temp.reshape((n,n))
 
@@ -32,7 +32,7 @@ def eval_mf_matrix_grad(r, n, levels):
     temp_grady = np.zeros((n,n))
     temp_grad2x = np.zeros((n,n))
     temp_grad2y = np.zeros((n,n))
-    a_0 = 1/gv.omega
+    a_0 = 1/omega
 
     # fill the first level (always occupied)
     for i in np.arange(n):
@@ -102,7 +102,7 @@ def kinetic_energy_nojastrow(r, A_up, A_down):
     return kin_en, feenberg_en
 
 
-        
+@jit(nopython=True)        
 def kinetic_energy(r, A_up, A_down,det_mf,b):
     """ Calculates the local kinetic energy
         Inputs:
@@ -113,61 +113,61 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
     """
     
     # Mean field part (N=2)
-    mf_grad = np.zeros((2,gv.num,gv.num_det))
-    mf_lap = np.zeros(gv.num_det)
+    mf_grad = np.zeros((2,num,num_det))
+    mf_lap = np.zeros(num_det)
     
-    Agradx_up = np.zeros((gv.N_up,gv.N_up,gv.num_det))
-    Agrady_up = np.zeros((gv.N_up,gv.N_up,gv.num_det))
-    Agrad2x_up = np.zeros((gv.N_up,gv.N_up,gv.num_det))
-    Agrad2y_up = np.zeros((gv.N_up,gv.N_up,gv.num_det))
-    Agradx_down = np.zeros((gv.N_down,gv.N_down,gv.num_det))
-    Agrady_down = np.zeros((gv.N_down,gv.N_down,gv.num_det))
-    Agrad2x_down = np.zeros((gv.N_down,gv.N_down,gv.num_det))
-    Agrad2y_down = np.zeros((gv.N_down,gv.N_down,gv.num_det))
-    A_inv_up = np.zeros((gv.N_up,gv.N_up,gv.num_det))
-    A_inv_down = np.zeros((gv.N_down,gv.N_down,gv.num_det))
+    Agradx_up = np.zeros((N_up,N_up,num_det))
+    Agrady_up = np.zeros((N_up,N_up,num_det))
+    Agrad2x_up = np.zeros((N_up,N_up,num_det))
+    Agrad2y_up = np.zeros((N_up,N_up,num_det))
+    Agradx_down = np.zeros((N_down,N_down,num_det))
+    Agrady_down = np.zeros((N_down,N_down,num_det))
+    Agrad2x_down = np.zeros((N_down,N_down,num_det))
+    Agrad2y_down = np.zeros((N_down,N_down,num_det))
+    A_inv_up = np.zeros((N_up,N_up,num_det))
+    A_inv_down = np.zeros((N_down,N_down,num_det))
 
-    [Agradx_up[:,:,0], Agrady_up[:,:,0], Agrad2x_up[:,:,0], Agrad2y_up[:,:,0]] = eval_mf_matrix_grad(r[:,:gv.N_up], gv.N_up, gv.level_up[:,0])
+    [Agradx_up[:,:,0], Agrady_up[:,:,0], Agrad2x_up[:,:,0], Agrad2y_up[:,:,0]] = eval_mf_matrix_grad(r[:,:N_up], N_up, level_up[:,0])
     A_inv_up[:,:,0] = np.linalg.inv(A_up[:,:,0])   # inverse of matrix A (useful for calculating gradient)
-    [Agradx_down[:,:,0], Agrady_down[:,:,0], Agrad2x_down[:,:,0], Agrad2y_down[:,:,0]] = eval_mf_matrix_grad(r[:,gv.N_up:], gv.N_down, gv.level_down[:,0])
+    [Agradx_down[:,:,0], Agrady_down[:,:,0], Agrad2x_down[:,:,0], Agrad2y_down[:,:,0]] = eval_mf_matrix_grad(r[:,N_up:], N_down, level_down[:,0])
     A_inv_down[:,:,0] = np.linalg.inv(A_down[:,:,0])   # inverse of matrix A (useful for calculating gradient)
     
     if gv.num_det==2:
-            [Agradx_up[:,:,1], Agrady_up[:,:,1], Agrad2x_up[:,:,1], Agrad2y_up[:,:,1]] = eval_mf_matrix_grad(r[:,:gv.N_up], gv.N_up, gv.level_up[:,1])
+            [Agradx_up[:,:,1], Agrady_up[:,:,1], Agrad2x_up[:,:,1], Agrad2y_up[:,:,1]] = eval_mf_matrix_grad(r[:,:N_up], N_up, level_up[:,1])
             A_inv_up[:,:,1] = np.linalg.inv(A_up[:,:,1])   # inverse of matrix A (useful for calculating gradient)
-            [Agradx_down[:,:,1], Agrady_down[:,:,1], Agrad2x_down[:,:,1], Agrad2y_down[:,:,1]] = eval_mf_matrix_grad(r[:,gv.N_up:], gv.N_down, gv.level_down[:,1])
+            [Agradx_down[:,:,1], Agrady_down[:,:,1], Agrad2x_down[:,:,1], Agrad2y_down[:,:,1]] = eval_mf_matrix_grad(r[:,N_up:], N_down, level_down[:,1])
             A_inv_down[:,:,1] = np.linalg.inv(A_down[:,:,1])   # inverse of matrix A (useful for calculating gradient)
 
     # gradient of first N_plus particles (spin up)
-    for k in range(gv.num_det): 
+    for k in np.arange(num_det): 
         
-        for l in range(gv.N_up):
-            for i in range(gv.N_up):
+        for l in np.arange(N_up):
+            for i in np.arange(N_up):
                     mf_grad[0,l,k] = mf_grad[0,l,k] + Agradx_up[l,i,k]*A_inv_up[i,l,k]
                     mf_grad[1,l,k] = mf_grad[1,l,k] + Agrady_up[l,i,k]*A_inv_up[i,l,k]
         # gradient of last N_minus particles (spin down)
-        for l in range(gv.N_down):
-            for i in range(gv.N_down):
-                mf_grad[0,gv.N_up+l,k] = mf_grad[0,gv.N_up+l,k] + Agradx_down[l,i,k]*A_inv_down[i,l,k]    #NOTA GLI INDICI INVERTITI
-                mf_grad[1,gv.N_up+l,k] = mf_grad[1,gv.N_up+l,k] + Agrady_down[l,i,k]*A_inv_down[i,l,k]
+        for l in np.arange(N_down):
+            for i in np.arange(N_down):
+                mf_grad[0,N_up+l,k] = mf_grad[0,N_up+l,k] + Agradx_down[l,i,k]*A_inv_down[i,l,k]    #NOTA GLI INDICI INVERTITI
+                mf_grad[1,N_up+l,k] = mf_grad[1,N_up+l,k] + Agrady_down[l,i,k]*A_inv_down[i,l,k]
     
     
     # laplacian
-    for k in range(gv.num_det):
-        for l in range(gv.N_up):
-            for i in range(gv.N_up):
+    for k in np.arange(num_det):
+        for l in np.arange(N_up):
+            for i in np.arange(N_up):
                 mf_lap[k] = mf_lap[k] + Agrad2x_up[l,i,k]*A_inv_up[i,l,k] + Agrad2y_up[l,i,k]*A_inv_up[i,l,k]
-        for l in range(gv.N_down):
-            for i in range(gv.N_down):
+        for l in np.arange(N_down):
+            for i in np.arange(N_down):
                 mf_lap[k] = mf_lap[k] + Agrad2x_down[l,i,k]*A_inv_down[i,l,k] + Agrad2y_down[l,i,k]*A_inv_down[i,l,k]
     
     
     # Jastrow part
     Ulap = 0
-    Ugrad = np.zeros((2,gv.num))
+    Ugrad = np.zeros((2,num))
     Ugrad2 = 0
-    for l in np.arange(gv.num):
-        for i in np.arange(gv.num):
+    for l in np.arange(num):
+        for i in np.arange(num):
             if i != l:
                 dx = r[0,l] - r[0,i]
                 dy = r[1,l] - r[1,i]
@@ -189,7 +189,7 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
             Ugrad2 = Ugrad2 + Ugrad[k,l]*Ugrad[k,l]
     Ulap = Ulap + Ugrad2 
     
-    if gv.num_det ==1:
+    if num_det ==1:
         #gradient times gradient part
         mf_U_grad2 = np.sum(Ugrad[0,:]*mf_grad[0,:]+Ugrad[1,:]*mf_grad[1,:])
     
@@ -197,14 +197,14 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
         kin_en = -1/2*mf_lap -1/2*Ulap -  mf_U_grad2
     
         #feenberg energy        SOLO SE usiamo la funzione senza jastrow?
-        feenberg_en = np.sum(mf_grad**2)
+        feenberg_en = np.sum(np.sum(mf_grad[:,:,0]**2,axis=0))
         feenberg_en = -1/4*(mf_lap-feenberg_en)
 #       return kin_en, feenberg_en
     
         feenberg_en = np.sum((Ugrad +mf_grad[:,:,0])**2)
         feenberg_en = -1/4*(mf_lap-feenberg_en)
-    if gv.num_det==2 :
-        mf2_grad= np.zeros((2,gv.num))
+    if num_det==2 :
+        mf2_grad= np.zeros((2,num))
         mf2_grad[0,:] = mf_grad[0,:,0]/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0]) + mf_grad[0,:,1]/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1])
         mf2_grad[1,:] = mf_grad[1,:,0]/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0]) + mf_grad[1,:,1]/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1])
         mf2_lap = mf_lap[0]*(1/1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0]) + mf_lap[1]*(1/1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1])
@@ -221,55 +221,55 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
     return kin_en, feenberg_en
 
 """ Jastrow factor part """
- 
+@jit(nopython=True)
 def jastrow_function(r,b):
     out = 0
-    for i in np.arange(0,gv.num):
-        for j in np.arange(i+1, gv.num):
+    for i in np.arange(0,num):
+        for j in np.arange(i+1, num):
             r_ij = np.sqrt(np.sum((r[:,i]-r[:,j])**2))
-            out = out - 0.5 * gv.a_param[i,j] *r_ij / ( 1 + b[i,j] * r_ij )
+            out = out - 0.5 * a_param[i,j] *r_ij / ( 1 + b[i,j] * r_ij )
     return np.exp(out)
 
- 
+@jit(nopython=True)
 def Udiff(b, r, l, i):
-    out = -gv.a_param[l,i]/(2*(1+b[l,i]*r)**2)
+    out = -a_param[l,i]/(2*(1+b[l,i]*r)**2)
     return out
 
-  
+@jit(nopython=True)
 def Udiff2(b, r, l, i):
-    out = gv.a_param[l,i]*b[l,i]/(1+b[l,i]*r)**3
+    out = a_param[l,i]*b[l,i]/(1+b[l,i]*r)**3
     return out
 
 
 
 # EVERYTHING THAT HAS TO DO WITH ENERGY
-    
+@jit(nopython=True)
 def potential_energy(r):
-    return 1/2 * gv.omega**2 * np.sum(r**2)
+    return 1/2 * omega**2 * np.sum(r**2)
 
 
-  
+@jit(nopython=True)
 def density(r,b):
     """ Return the probability density of point r.
         Inputs:
             b = parameters of the Jastrow factors
             r = point of which we want the probability density """
-    A_up = np.zeros((gv.N_up,gv.N_up,gv.num_det))
-    A_down = np.zeros((gv.N_down,gv.N_down,gv.num_det))   
+    A_up = np.zeros((N_up,N_up,num_det))
+    A_down = np.zeros((N_down,N_down,num_det))   
     
-    A_up[:,:,0] = eval_mf_matrix(r[:,:gv.N_up], gv.N_up, gv.level_up[:,0])
-    A_down[:,:,0] = eval_mf_matrix(r[:,gv.N_up:], gv.N_down, gv.level_down[:,0])    
+    A_up[:,:,0] = eval_mf_matrix(r[:,:N_up], N_up, level_up[:,0])
+    A_down[:,:,0] = eval_mf_matrix(r[:,N_up:], N_down, level_down[:,0])    
     if gv.num_det ==2 :
-        A_up[:,:,1] = eval_mf_matrix(r[:,:gv.N_up], gv.N_up, gv.level_up[:,1])
-        A_down[:,:,1] = eval_mf_matrix(r[:,gv.N_up:], gv.N_down, gv.level_down[:,1])
+        A_up[:,:,1] = eval_mf_matrix(r[:,:N_up], N_up, level_up[:,1])
+        A_down[:,:,1] = eval_mf_matrix(r[:,N_up:], N_down, level_down[:,1])
     
     #print(np.shape(A_up), np.shape(A_down))
     
-    det_mf = np.zeros((2,gv.num_det))
+    det_mf = np.zeros((2,num_det))
     det_mf[0,0] = np.linalg.det(A_up[:,:,0])
     det_mf[1,0] = np.linalg.det(A_down[:,:,0])
     psi_mf = det_mf[0,0]*det_mf[1,0]
-    if gv.num_det ==2 :
+    if num_det ==2 :
         det_mf[0,1] = np.linalg.det(A_up[:,:,1])
         det_mf[1,1] = np.linalg.det(A_down[:,:,1])
         psi_mf = psi_mf + det_mf[0,1]*det_mf[1,1]
@@ -280,16 +280,16 @@ def density(r,b):
     return psi**2, A_up, A_down, det_mf
 
 
-
+@jit(nopython=True)
 def generate_pos(r, delta, mode):
     new_r = np.zeros(np.shape(r))
     if mode==1:
-        new_r = r + (np.random.rand(2, gv.num)-1/2)*delta
-#    elif mode==2:
+        new_r = r + (np.random.rand(2, num)-1/2)*delta
+#    elif mode==2
 #        return 0
     return new_r
 
-    
+@jit(nopython=True)  
 def sampling_function(r, delta, N_s, mode, cut,b):
     """ This function performs Metropolis algorithm: it samples "num" points from distribution "p" using mode "mode".
         Inputs:
@@ -301,7 +301,7 @@ def sampling_function(r, delta, N_s, mode, cut,b):
                    2: moves one particle at each step
             cut = number of initial points of the sampling to delete """
     count = 0
-    pos = np.zeros((2,gv.num,N_s))
+    pos = np.zeros((2,num,N_s))
     pot_energy = np.zeros(N_s)
     kin_energy = np.zeros(N_s)
     feenberg_energy = np.zeros(N_s)
@@ -334,6 +334,73 @@ def sampling_function(r, delta, N_s, mode, cut,b):
             n = n + 1
 #    elif mode==2:
 #        return 0
-    print("Accepted steps (%):")
-    print(count/N_s*100)
+    #print("Accepted steps (%):")
+    #print(count/N_s*100)
     return pos[:,:,cut:], pot_energy[cut:], kin_energy[cut:], feenberg_energy[cut:]
+
+#%% 
+global omega, N_up, N_down, num, L4,a_param,level_up, level_down, num_det
+def initialize_variables(temp_omega, temp_N_up, temp_N_down, temp_L4):
+    global omega, N_up, N_down, num , L4,a_param
+    omega = temp_omega
+    N_up = temp_N_up # number of particles with spin up
+    N_down = temp_N_down #number of particles with spin down
+    num = N_up + N_down
+    L4 = temp_L4 #angular momentum state when num=4, can be 0 (l=0,S=0) 1 (l=0,S=1) 2 (l=2,S=0)
+    a_param = np.zeros((num,num))  # jasstrow factor parameter
+    a_param[:N_up,:N_up] = np.ones((N_up,N_up))*2. # up-up
+    a_param[:N_up,N_up:] = np.ones((N_up,N_down))*3. # up-down
+    a_param[N_up:,:N_up] = np.ones((N_down,N_up))*3. # down-up
+    a_param[N_up:,N_up:] = np.ones((N_down,N_down))*2. # down-down
+    
+def occ_levels(L4):
+    global level_up, level_down, num_det
+    if num == 2:
+        level_up = np.ones((1,1))*0
+        level_down = np.ones((1,1))*0
+        num_det = 1
+    if num == 3: 
+        level_up = np.transpose(np.array([[0,1],[0,2]]))
+        level_down = np.ones((1,2))*0
+        num_det = 2
+    if num == 4:
+        if L4 == 0:
+            level_up = np.transpose(np.array([[0,1],[0,2]]))
+            level_down = np.transpose(np.array([[0,2],[0,1]]))
+            num_det = 2
+        if L4 == 1:
+            level_up =np.transpose( np.array([[0,1,2]]))
+            level_down = np.ones((1))*0
+            num_det = 1
+        if L4 == 2:
+            level_up = np.transpose(np.array([[0,1],[0,2]]))
+            level_down = level_up
+            num_det = 2
+    if num == 5:
+        level_up = np.transpose(np.array([[0,1,2],[0,1,2]]))
+        level_down = np.transpose(np.array([[0,1],[0,2]]))
+        num_det = 2
+    if num == 6: 
+        level_up = np.transpose(np.array([[0,1,2]]))
+        level_down = level_up
+        num_det = 1
+    
+    #%% MAIN PARAMETERS DEFINITION
+temp_omega = 1
+temp_N_up = 3
+temp_N_down = 3
+temp_L4 = 0
+
+initialize_variables(temp_omega, temp_N_up, temp_N_down,temp_L4)
+occ_levels(temp_L4)
+
+r_init = np.random.rand(2, gv.num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
+delta = 1                  # width of movement
+N_s = 10**4                   # number of samples
+cut = 10**3
+
+b= np.zeros((gv.num,gv.num))
+t_in = time.time()
+samples, pot_energy, kin_energy, feenberg_energy = sampling_function(r_init, delta, N_s, 1, cut,b)
+t_fin= time.time()
+print(t_fin-t_in)

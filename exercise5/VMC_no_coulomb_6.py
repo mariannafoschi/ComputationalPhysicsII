@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from numba import jit
 import mf_functions as my
 import global_variables as gv
+import time
 
 #%% FUNCTION DEFINITION
 
@@ -32,13 +33,14 @@ gv.occ_levels(temp_L4)
 
 r_init = np.random.rand(2, gv.num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
 delta = 1                  # width of movement
-N_s = 10**6                     # number of samples
+N_s = 10**4                   # number of samples
 cut = 10**3
 
 b= np.zeros((gv.num,gv.num))
+t_in = time.time()
 samples, pot_energy, kin_energy, feenberg_energy = my.sampling_function(r_init, delta, N_s, 1, cut,b)
-
-
+t_fin= time.time()
+print(t_fin-t_in)
 
 #%% DATA ELABORATION
 # calculation of energy and errors
