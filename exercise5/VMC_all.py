@@ -335,7 +335,7 @@ def reweight_function(samples,mf_grad,mf_lap,det_mf,b_1,b_2,b_vec,Ns):
             
     return reweight,kin_energy_var
          
- 
+@jit(nopython=True) 
 def sampling_function(r, delta, N_s, mode, cut,b):
     """ This function performs Metropolis algorithm: it samples "num" points from distribution "p" using mode "mode".
         Inputs:
@@ -369,6 +369,7 @@ def sampling_function(r, delta, N_s, mode, cut,b):
     
     n=1
     m=0
+    m_corr = 10 #correlation lenght
     while n<N_s:      
         pos_temp = generate_pos(pos_old, delta, mode)#generate_pos(pos[:,:,n-1], delta, mode)
         new_density, A_up, A_down,det_mf_temp = density(pos_temp,b)
@@ -376,20 +377,19 @@ def sampling_function(r, delta, N_s, mode, cut,b):
         temp = np.random.rand(1)
         
         if temp[0] <= w:
-            if m==10:
+            if m==m_corr:
                 pos[:,:,n] = pos_temp
                 pot_energy[n]= potential_energy(pos_temp)
                 coul_energy[n] = coulomb_energy(pos_temp)            
                 kin_energy[n], feenberg_energy[n],mf_grad[:,:,:,n],mf_lap[:,n] = kinetic_energy(pos_temp, A_up, A_down,det_mf_temp,b)
-
+                count = count + 1
             prev_density = new_density
             pos_old=pos_temp
             det_mf_old = det_mf_temp
             A_up_old = A_up
             A_down_old = A_down
-            count = count + 1
         else:
-            if m==10:
+            if m==m_corr:
                 pos[:,:,n] = pos_old # pos[:,:,n-1]
                 pot_energy[n] = potential_energy(pos_old) #pot_energy[n-1]
                 coul_energy[n] = coulomb_energy(pos_old) #coul_energy[n-1]
@@ -402,12 +402,10 @@ def sampling_function(r, delta, N_s, mode, cut,b):
                 #feenberg_energy[n] = feenberg_energy[n-1]
 
         
-        if m==10:
+        if m==m_corr:
             n = n+1
             m=0 
         m=m+1
-#    elif mode==2:
-#        return 0
     print("Accepted steps (%):")
     print(count/N_s*100)
     return pos[:,:,cut:], pot_energy[cut:],coul_energy[cut:], kin_energy[cut:], feenberg_energy[cut:],mf_grad[:,:,:,cut:],mf_lap[:,cut:],det_mf[:,:,cut:]
