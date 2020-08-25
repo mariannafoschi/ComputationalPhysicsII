@@ -56,7 +56,7 @@ def eval_mf_matrix_grad(r, n, levels):
                 temp_grad2y[j,i] = (3-r[1,j]**2/a_0) * temp_grady[j,0]
     return temp_gradx, temp_grady, temp_grad2x, temp_grad2y
 
-@jit(nopython=True)    
+@jit(nopython=True)
 def kinetic_energy(r, A_up, A_down,det_mf,b):
     """ Calculates the local kinetic energy
         Inputs:
@@ -147,15 +147,15 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
         #gradient times gradient part
         mf_U_grad2 = np.sum(Ugrad[0,:]*mf_grad[0,:,0]+Ugrad[1,:]*mf_grad[1,:,0])
         #summing the contributions
-        kin_en = -1/2*mf_lap -1/2*Ulap -  mf_U_grad2
+        kin_en = -1/2*mf_lap[0] -1/2*Ulap -  mf_U_grad2
         #feenberg energy        SOLO SE usiamo la funzione senza jastrow?
         #feenberg_en = np.sum(np.sum(mf_grad[:,:,0]**2,axis=0))
         #feenberg_en = -1/4*(mf_lap-feenberg_en)
 #       return kin_en, feenberg_en
     
-        #feenberg_en = np.sum(np.sum((Ugrad +mf_grad[:,:,0])**2,axis=0))
-        #feenberg_en = -1/4*(mf_lap-feenberg_en)
-        feenberg_en = 0
+        a = np.sum(np.sum((Ugrad +mf_grad[:,:,0])**2,axis=0))
+        feenberg_en = -1/4*(mf_lap[0]-a)
+        #feenberg_en = 0
     if num_det==2 :
         mf2_grad= np.zeros((2,num))
         mf2_grad[0,:] = mf_grad[0,:,0]/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0]) + mf_grad[0,:,1]/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1])
@@ -169,7 +169,8 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
         kin_en = -1/2*mf2_lap -1/2*Ulap -  mf_U_grad2
         
         #feenberg energy        SOLO SE usiamo la funzione senza jastrow?
-        feenberg_en = np.sum((mf2_grad+Ugrad)**2)
+        a = np.sum(np.sum((mf2_grad+Ugrad)**2,0))
+        feenberg_en = 1/4*(mf2_lap-a)
     return kin_en,feenberg_en, mf_grad, mf_lap
 
 @jit(nopython=True)        
@@ -207,16 +208,16 @@ def kinetic_energy_var(r, mf_grad, mf_lap,det_mf,b):
         mf_U_grad2 = np.sum(Ugrad[0,:]*mf_grad[0,:,0]+Ugrad[1,:]*mf_grad[1,:,0])
     
         #summing the contributions
-        kin_en = -1/2*mf_lap -1/2*Ulap -  mf_U_grad2
+        kin_en = -1/2*mf_lap[0] -1/2*Ulap -  mf_U_grad2
         #feenberg energy        SOLO SE usiamo la funzione senza jastrow?
         #feenberg_en = np.sum(np.sum(mf_grad[:,:,0]**2,axis=0))
         #feenberg_en = -1/4*(mf_lap-feenberg_en)
 #       return kin_en, feenberg_en
     
-        #feenberg_en = np.sum(np.sum((Ugrad +mf_grad[:,:,0])**2,axis=0))
-        #feenberg_en = -1/4*(mf_lap-feenberg_en)
-        feenberg_en = 0
-        return kin_en[0],feenberg_en
+        a = np.sum(np.sum((mf_grad[:,:,0]+Ugrad)**2,0))
+        feenberg_en = 1/4*(mf_lap[0]-a)
+
+        
     if num_det==2 :
         mf2_grad= np.zeros((2,num))
         mf2_grad[0,:] = mf_grad[0,:,0]/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0]) + mf_grad[0,:,1]/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1])
@@ -230,9 +231,10 @@ def kinetic_energy_var(r, mf_grad, mf_lap,det_mf,b):
         kin_en = -1/2*mf2_lap -1/2*Ulap -  mf_U_grad2
         
         #feenberg energy        SOLO SE usiamo la funzione senza jastrow?
-        feenberg_en = np.sum((mf2_grad+Ugrad)**2)
-        
-        return kin_en,feenberg_en
+        a = np.sum(np.sum((mf2_grad[:,:]+Ugrad)**2,0))
+        feenberg_en = 1/4*(mf2_lap-a)
+
+    return kin_en,feenberg_en
 
 """ Jastrow factor part """
 @jit(nopython=True)
@@ -331,8 +333,9 @@ def reweight_function(samples,mf_grad,mf_lap,det_mf,b_1,b_2,b_vec,Ns):
             kin_energy_var[i,1],finberg[i,1] = kinetic_energy_var(sam,mf_grad[:,:,:,i],mf_lap[:,i],det_mf[:,:,i],b_2)
 
             
-    return reweight,kin_energy_var
-          
+    return reweight**2,kin_energy_var
+         
+@jit(nopython=True) 
 def sampling_function(r, delta, N_s, mode, cut,b):
     """ This function performs Metropolis algorithm: it samples "num" points from distribution "p" using mode "mode".
         Inputs:
@@ -355,38 +358,56 @@ def sampling_function(r, delta, N_s, mode, cut,b):
     
     prev_density, A_up, A_down,det_mf[:,:,0] = density(r,b)
     pos[:,:,0] = r
+    pos_old = r
     kin_energy[0], feenberg_energy[0],mf_grad[:,:,:,0],mf_lap[:,0] = kinetic_energy(r, A_up, A_down,det_mf[:,:,0],b)
+    det_mf_old =det_mf[:,:,0]
+    A_up_old = A_up
+    A_down_old = A_down
     pot_energy[0] = potential_energy(r)
     coul_energy[0] = coulomb_energy(r)
     count = count + 1
     
-    for n in np.arange(1,N_s):       
-        
-        pos_temp = generate_pos(pos[:,:,n-1], delta, mode)
-        new_density, A_up, A_down,det_mf[:,:,n] = density(pos_temp,b)
+    n=1
+    m=0
+    m_corr = 10 #correlation lenght
+    while n<N_s:      
+        pos_temp = generate_pos(pos_old, delta, mode)#generate_pos(pos[:,:,n-1], delta, mode)
+        new_density, A_up, A_down,det_mf_temp = density(pos_temp,b)
         w = new_density/prev_density   # VEDI COMMENTO QUADERNO, PUO ESSERE IMPORTANTE
         temp = np.random.rand(1)
-        if temp <= w:
-            pos[:,:,n] = pos_temp
-            pot_energy[n]= potential_energy(pos_temp)
-            coul_energy[n] = coulomb_energy(pos_temp)
-            kin_energy[n], feenberg_energy[n],mf_grad[:,:,:,n],mf_lap[:,n] = kinetic_energy(pos_temp, A_up, A_down,det_mf[:,:,n],b)
-            prev_density = new_density
-            count = count + 1
-        else:
-            pos[:,:,n] = pos[:,:,n-1]
-            pot_energy[n] = pot_energy[n-1]
-            coul_energy[n] = coul_energy[n-1]
-            kin_energy[n] = kin_energy[n-1]
-            mf_grad[:,:,:,n] = mf_grad[:,:,:,n-1]
-            mf_lap[:,n] = mf_lap[:,n-1]
-            det_mf[:,:,n]=det_mf[:,:,n-1]
-            feenberg_energy[n] = feenberg_energy[n-1]
         
-#    elif mode==2:
-#        return 0
-    #print("Accepted steps (%):")
-    #print(count/N_s*100)
+        if temp[0] <= w:
+            if m==m_corr:
+                pos[:,:,n] = pos_temp
+                pot_energy[n]= potential_energy(pos_temp)
+                coul_energy[n] = coulomb_energy(pos_temp)            
+                kin_energy[n], feenberg_energy[n],mf_grad[:,:,:,n],mf_lap[:,n] = kinetic_energy(pos_temp, A_up, A_down,det_mf_temp,b)
+                count = count + 1
+            prev_density = new_density
+            pos_old=pos_temp
+            det_mf_old = det_mf_temp
+            A_up_old = A_up
+            A_down_old = A_down
+        else:
+            if m==m_corr:
+                pos[:,:,n] = pos_old # pos[:,:,n-1]
+                pot_energy[n] = potential_energy(pos_old) #pot_energy[n-1]
+                coul_energy[n] = coulomb_energy(pos_old) #coul_energy[n-1]
+                kin_energy[n], feenberg_energy[n],mf_grad[:,:,:,n],mf_lap[:,n] = kinetic_energy(pos_old, A_up_old, A_down_old,det_mf_old,b)
+                det_mf[:,:,n]=det_mf_old
+                #kin_energy[n] = kin_energy[n-1]
+                #mf_grad[:,:,:,n] = mf_grad[:,:,:,n-1]
+                #mf_lap[:,n] = mf_lap[:,n-1]
+                #det_mf[:,:,n]=det_mf[:,:,n-1]
+                #feenberg_energy[n] = feenberg_energy[n-1]
+
+        
+        if m==m_corr:
+            n = n+1
+            m=0 
+        m=m+1
+    print("Accepted steps (%):")
+    print(count/N_s*100)
     return pos[:,:,cut:], pot_energy[cut:],coul_energy[cut:], kin_energy[cut:], feenberg_energy[cut:],mf_grad[:,:,:,cut:],mf_lap[:,cut:],det_mf[:,:,cut:]
 
 #%% 
@@ -443,8 +464,8 @@ def occ_levels(L4):
     
 #%% MAIN PARAMETERS DEFINITION
 temp_omega = 1
-temp_num =2
-temp_N_up = 1
+temp_num =5
+temp_N_up =3
 temp_N_down = temp_num -temp_N_up
 temp_L4=0
 if temp_num ==4:
@@ -458,53 +479,69 @@ initialize_variables(temp_omega, temp_N_up, temp_N_down,temp_L4, temp_jastrow)
 occ_levels(temp_L4)
 
 r_init = np.random.rand(2, num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
-delta = 1.                  # width of movement
+delta = 1.5                  # width of movement
 N_s = 10**1          # number of samples
-cut = 1
+cut = 10**0
 mode = 1
 b= np.zeros((num,num))
 b= generate_b(np.array([0.3875,0.3875])) #b_upup b_updown
-t_in = time.time()
-samples, pot_energy,coul_energy, kin_energy, feenberg_energy,mf_grad,mf_lap,det_mf = sampling_function(r_init, delta, N_s, mode, cut,b)
-t_fin= time.time()
-print(t_fin-t_in)
 
-#%%
-energy = np.mean(pot_energy+kin_energy)
-energy_err = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy)**2)-energy**2)
-print('energy =', energy, '+-',energy_err)
-energy = np.mean(pot_energy+feenberg_energy)
-energy_err = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((pot_energy+feenberg_energy)**2)-energy**2)
-print('energy feenberg=', energy, '+-',energy_err)
-
-energy = np.mean(pot_energy+kin_energy+coul_energy)
-energy_err = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy+coul_energy)**2)-energy**2)
-print('energy + coulomb=', energy, '+-',energy_err)
+single_trial =0
+if single_trial==1:
+    t_in = time.time()
+    samples, pot_energy,coul_energy, kin_energy, feenberg_energy,mf_grad,mf_lap,det_mf = sampling_function(r_init, delta, N_s, mode, cut,b)
+    t_fin= time.time()
+    print(t_fin-t_in)
+    
+    energy = np.mean(pot_energy+kin_energy)
+    energy_err = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy)**2)-energy**2)
+    print('energy =', energy, '+-',energy_err)
+    energy_fee = np.mean(pot_energy+feenberg_energy)
+    energy_err_fee = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((pot_energy+feenberg_energy)**2)-energy_fee**2)
+    print('energy feenberg=', energy_fee, '+-',energy_err_fee)
+    
+    energy = np.mean(pot_energy+kin_energy+coul_energy)
+    energy_err = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy+coul_energy)**2)-energy**2)
+    print('energy + coulomb=', energy, '+-',energy_err)
 
 #%% variational procedure
 t_in = time.time()
 
 N_s=10**5
-cut = 10**3
+cut = 10**4
 variational = 1
 if variational ==1:
     
     count = 0
     count2=0
-    count3 = 0
-    step_acc =1
-    b = np.array([1.,1.]) #b_upup b_updown
-    bvec = b
-    energy_prev = 10000
+    step_acc =1 #if we accept the step or not
+    b = np.array([1.,0.5]) #b_upup b_updown
+    #energy_prev = 10000
+    step_dir_prev = np.zeros(2)
     
-    step = 0.1
+    step = 0.3
 
-    count_fin = 30
+    count_fin = 60
     step_dir = np.zeros(2)
-    der_step = 0.05
+    der_step = 0.0001
 
+    #initial point
+    b_ = generate_b(b)
+    samples, pot_energy,coul_energy, kin_energy, feenberg_energy,mf_grad,mf_lap,det_mf = sampling_function(r_init, delta, N_s, mode, cut,b_)
+    energy_now = np.mean(pot_energy+kin_energy+coul_energy)
+    energy_err_now = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy+coul_energy)**2)-energy_now**2)
+    
+    print(' ')
+    print('Punto iniziale', count)
+    print('energy =', energy_now,' +- ',energy_err_now )
+    print('b_updown =', b[1])
+    print('b_upup =', b[0])
+    print(' ')
+    
+    
     while count < count_fin:
-        print('iteration', count)
+        print('iteration', count+1)
+        print('energy now =', energy_now,' +- ',energy_err_now )
         print('step = ', step)
         
         b1 = b + np.array([1,0])*der_step #b_upup 
@@ -512,89 +549,144 @@ if variational ==1:
         b_1 = generate_b(b1)
         b_2 = generate_b(b2)
         b_ = generate_b(b)
-        b_vec = generate_b(bvec)
         
-        if np.sqrt(np.sum((bvec-b)**2))< 0.05 and N_s==10**8: #da decidere in che casi usare il reweighting o un nuovo sampling
-            Ns = N_s -cut
-            reweight_0,kin_energy_var0 = reweight_function(samples,mf_grad,mf_lap,det_mf,b_,b_,b_vec,Ns)        
-            energy = np.mean((pot_energy+coul_energy+kin_energy_var0[:,0])*reweight_0[:,0])/np.mean(reweight_0[:,0])
-            #energy_err = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean(((kin_energy_var0[:,0]+pot_energy+coul_energy)*reweight_0[:,0])**2)/np.mean(reweight_0[:,0])**2-energy**2)
-            print('SMART')
-        else:
-            samples, pot_energy,coul_energy, kin_energy, feenberg_energy,mf_grad,mf_lap,det_mf = sampling_function(r_init, delta, N_s, mode, cut,b_)
-            energy = np.mean(pot_energy+kin_energy+coul_energy)
-            energy_err = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy+coul_energy)**2)-energy**2)
-        
-        print('energy =', energy,' +- ',energy_err )
-        print('b_updown =', b[1])
-        print('b_upup =', b[0])
-        
+        # calcolo il gradiente
         Ns = N_s-cut
         reweight,kin_energy_var = reweight_function(samples,mf_grad,mf_lap,det_mf,b_1,b_2,b_,Ns)        
         
         energy_var = np.zeros(2)
-        energy_var_err = np.zeros(2)
+        #energy_var_err = np.zeros(2)
         energy_var[0] = np.mean((pot_energy+coul_energy+kin_energy_var[:,0])*reweight[:,0])/np.mean(reweight[:,0])
-        energy_var_err[0] = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy_var[:,0]+pot_energy+coul_energy)**2)-energy_var[0]**2)
+        #energy_var_err[0] = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean(((kin_energy_var[:,0]+pot_energy+coul_energy)*reweight[:,0]/np.mean(reweight[:,0]))**2)-energy_var[0]**2)
         energy_var[1] = np.mean((pot_energy+coul_energy+kin_energy_var[:,1])*reweight[:,1])/np.mean(reweight[:,1])
-        step_dir[:] = energy_var[:]-energy        
+        #energy_var_err[1] = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean(((kin_energy_var[:,1]+pot_energy+coul_energy)*reweight[:,1]/np.mean(reweight[:,1]))**2)-energy_var[1]**2)
+        step_dir[:] = energy_var[:]-energy_now        
         norm = np.sqrt(np.sum(step_dir**2))
+        print('b_updown =', b[1])
+        print('b_upup =', b[0])
         print('energy var',energy_var)
-        #is the error too big?
-        if norm < energy_err:
-            #if N_s>=10**6 and count3<3:
-                #step=step/2
-                #der_step =der_step/2
-                #count3 = count3+1
-                #print('energy error is big, divided the step by 2')
-            if N_s<=10**7:
-                N_s=10*N_s
-                print('energy error is too big, increased samples to', N_s)
+        print('derivative', norm/der_step)
+        
+        #now I calculate with MC the energy of the new point and decide what to do
+        b_ = generate_b(b - step_dir/norm * step)
+        samples_temp, pot_energy_temp,coul_energy_temp, kin_energy_temp, feenberg_energy,mf_grad_temp,mf_lap_temp,det_mf_temp = sampling_function(r_init, delta, N_s, mode, cut,b_)
+        energy_new = np.mean(pot_energy_temp+kin_energy_temp+coul_energy_temp)
+        energy_err_new = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy_temp+pot_energy_temp+coul_energy_temp)**2)-energy_new**2)
+        print('energy new =', energy_new,' +- ',energy_err_new )
+        
+    
+        #phase 1: constant step
+        if (energy_now-energy_new>-np.sqrt(2)*energy_err_new and energy_err_new<energy_err_now) or energy_err_new<energy_err_now: #we accept the step
+            energy_now = energy_new
+            energy_err_now = energy_err_new
+            samples = samples_temp
+            pot_energy = pot_energy_temp
+            kin_energy = kin_energy_temp
+            coul_energy = coul_energy_temp
+            mf_grad = mf_grad_temp
+            mf_lap = mf_lap_temp
+            det_mf = det_mf_temp
+            b = b - step_dir/norm * step
+            step = step * 1.4
+            print('ACCEPTED')
             
-            if N_s >10**7:# and count3>2:
-                count = count_fin 
-                print('energy error is too big to continue')
-                print(' ')
-                print('final energy = ',energy,' +- ', energy_err)
-                print('b_updown =', b[1])
-                print('b_upup =', b[0])
-                print('final step tried = ',step)
-        else:
-            #phase 1: constant step
-            if energy_prev>energy-2*energy_err and count2 ==0:
-                step = step
-            #phase 2: decaying step
-            else:
-                if count2==0:
-                    N_s = 10**6
-                der_step = step
-                if count2>15:
-                    count = count_fin
-                    print('final energy = ',energy,' +- ', energy_err)
-                    print('b_updown =', b[1])
-                    print('b_upup =', b[0])
-                    print('final step tried = ',step)
-                    print('counter fase 2 =',count2)
-                    
-                if energy>energy_prev:
-                    b = bvec        
-                    step_acc = 0
-                
-                step = step/1.5
-                der_step = step
-                count2 =count2+1
-                print('count2',count2)    
-                
-            energy_prev = energy
-            if step_acc==1:
-                bvec = b                     
-                b = b - step_dir/norm * step                   
-
-            count= count +1     
-            count3=0
-            step_acc =1
+        #phase 2: decaying step
+        else: # we don't accept the step and diminuish the step
+            step = step/1.5
+            if step<der_step:
+                step = der_step
+            print('NOT ACCEPTED')  
+        
+        count= count +1
         print(' ')
-     
+        
+        
+        
+        
+        
+#        #SECONDO METODO: USO IL GRADIENTE
+#        print('iteration', count+1)
+#        print('energy now =', energy_now,' +- ',energy_err_now )
+#        
+#        b1 = b + np.array([1,0])*der_step #b_upup 
+#        b2 = b + np.array([0,1])*der_step #b_updown
+#        b_1 = generate_b(b1)
+#        b_2 = generate_b(b2)
+#        b_ = generate_b(b)
+#        
+#        # calcolo il gradiente
+#        Ns = N_s-cut
+#        reweight,kin_energy_var = reweight_function(samples,mf_grad,mf_lap,det_mf,b_1,b_2,b_,Ns)        
+#        
+#        energy_var = np.zeros(2)
+#        #energy_var_err = np.zeros(2)
+#        energy_var[0] = np.mean((pot_energy+coul_energy+kin_energy_var[:,0])*reweight[:,0])/np.mean(reweight[:,0])
+#        #energy_var_err[0] = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean(((kin_energy_var[:,0]+pot_energy+coul_energy)*reweight[:,0]/np.mean(reweight[:,0]))**2)-energy_var[0]**2)
+#        energy_var[1] = np.mean((pot_energy+coul_energy+kin_energy_var[:,1])*reweight[:,1])/np.mean(reweight[:,1])
+#        #energy_var_err[1] = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean(((kin_energy_var[:,1]+pot_energy+coul_energy)*reweight[:,1]/np.mean(reweight[:,1]))**2)-energy_var[1]**2)
+#        step_dir[:] = energy_var[:]-energy_now        
+#        norm = np.sqrt(np.sum(step_dir**2))
+#        print('b_updown =', b[1])
+#        print('b_upup =', b[0])
+#        print('energy var',energy_var)
+#        print('derivative', norm/der_step)
+#        
+#        #!now I calculate with MC the energy of the new point and decide what to do
+#        b = b - step_dir/der_step * 0.5
+#        b_ = generate_b(b)
+#        samples, pot_energy,coul_energy, kin_energy, feenberg_energy,mf_grad,mf_lap,det_mf = sampling_function(r_init, delta, N_s, mode, cut,b_)
+#        energy_now = np.mean(pot_energy+kin_energy+coul_energy)
+#        energy_err_now = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy+coul_energy)**2)-energy_now**2)
+#        print('energy now =', energy_now,' +- ',energy_err_now )
+#        
+#        count= count +1
+#        print(' ')
+        
+        
+        
+        
+    print('final energy = ',energy_now,' +- ', energy_err_now)
+    print('b_updown =', b[1])
+    print('b_upup =', b[0])
+    print('final step tried = ',step)
+                
+# Possibili minimi: 0.3602, 0.3782, 0.3864
+
+
+#%% plot around one of the minima
+# do the sampling   
+b = np.array([1.,0.38]) #b_upup b_updown
+b_ = generate_b(b)
+samples, pot_energy,coul_energy, kin_energy, feenberg_energy,mf_grad,mf_lap,det_mf = sampling_function(r_init, delta, N_s, mode, cut,b_)
+energy_now = np.mean(pot_energy+kin_energy+coul_energy)
+energy_err_now = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy+coul_energy)**2)-energy_now**2)
+
+bb = 0.02
+n_point = 20
+energy_shape = np.zeros(n_point)
+b_range = np.arange(-bb, bb, 2*bb/n_point)
+for i in range(n_point):
+    print(i)
+    b1 = b #b_upup 
+    b2 = b + b_range[i] #b_updown
+    b_1 = generate_b(b1)
+    b_2 = generate_b(b2)
+    b_ = generate_b(b)
+    
+    # calcolo il gradiente
+    Ns = N_s-cut
+    reweight,kin_energy_var = reweight_function(samples,mf_grad,mf_lap,det_mf,b_1,b_2,b_,Ns)        
+    
+    energy_var = np.zeros(2)
+    #energy_var_err = np.zeros(2)
+    energy_var[0] = np.mean((pot_energy+coul_energy+kin_energy_var[:,0])*reweight[:,0])/np.mean(reweight[:,0])
+    #energy_var_err[0] = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean(((kin_energy_var[:,0]+pot_energy+coul_energy)*reweight[:,0]/np.mean(reweight[:,0]))**2)-energy_var[0]**2)
+    energy_var[1] = np.mean((pot_energy+coul_energy+kin_energy_var[:,1])*reweight[:,1])/np.mean(reweight[:,1])
+    #energy_var_err[1] = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean(((kin_energy_var[:,1]+pot_energy+coul_energy)*reweight[:,1]/np.mean(reweight[:,1]))**2)-energy_var[1]**2)
+    energy_shape[i] = energy_var[1]
+
+plt.figure()
+plt.plot(b_range + b[1], energy_shape)     
 
 t_fin= time.time()
 print('time = ',t_fin-t_in)
