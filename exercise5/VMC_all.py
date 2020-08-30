@@ -228,7 +228,7 @@ def kinetic_energy_var(r, mf_grad, mf_lap,det_mf,b):
         mf2_grad[0,:] = mf_grad[0,:,0]/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0]) + mf_grad[0,:,1]/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1])
         mf2_grad[1,:] = mf_grad[1,:,0]/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0]) + mf_grad[1,:,1]/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1])
         mf2_lap = mf_lap[0]*(1/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0])) + mf_lap[1]*(1/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1]))
-         
+        
         #gradient times gradient part
         mf_U_grad2 = np.sum(Ugrad[0,:]*mf2_grad[0,:]+Ugrad[1,:]*mf2_grad[1,:])
     
@@ -331,8 +331,6 @@ def reweight_function(samples,mf_grad,mf_lap,det_mf,b_1,b_2,b_vec,Ns):
             reweight[i,1] = jastrow_function(sam,b_2)/jastrow_function(sam,b_vec)
             kin_energy_var[i,0],finberg[i,0]= kinetic_energy_var(sam,mf_grad[:,:,:,i],mf_lap[:,i],det_mf[:,:,i],b_1)
             kin_energy_var[i,1],finberg[i,1] = kinetic_energy_var(sam,mf_grad[:,:,:,i],mf_lap[:,i],det_mf[:,:,i],b_2)
-
-            
     return reweight**2, kin_energy_var
          
 @jit(nopython=True) 
@@ -374,7 +372,7 @@ def sampling_function(r, delta, N_s, mode, cut,b):
     
     n=1
     m=1
-    m_corr = 7 #correlation lenght (you take one sample every m_corr)
+    m_corr = 5 #correlation lenght (you take one sample every m_corr)
     while n<N_s:      
         pos_temp = generate_pos(pos_old, delta, mode)#generate_pos(pos[:,:,n-1], delta, mode)
         new_density, A_up, A_down,det_mf_temp = density(pos_temp,b)
@@ -484,8 +482,8 @@ def occ_levels(L4):
     
 #%% MAIN PARAMETERS DEFINITION
 temp_omega = 1
-temp_num =2
-temp_N_up =1
+temp_num =3
+temp_N_up =2
 temp_N_down = temp_num - temp_N_up
 temp_L4=0
 if temp_num ==4:
@@ -506,7 +504,7 @@ N_s = 10**5          # number of samples
 cut = 10**3
 mode = 1
 b= np.zeros((num,num))
-b= generate_b(np.array([1.,.385])) #b_upup b_updown
+b= generate_b(np.array([0.5,0.25])) #b_upup b_updown
 
 single_trial = 0
 if single_trial==1:
@@ -630,22 +628,25 @@ if correlation == 1:
 t_in = time.time()
 
 N_s=10**5
-cut = 10**4
-variational = 0
+cut = 10**3
+variational = 1
 if variational ==1:
     
     count = 0
     step_acc =1 #if we accept the step or not
-    b = np.array([1.,1.]) #b_upup b_updown
+    b = np.array([0.5,0.25]) #b_upup b_updown
     #energy_prev = 10000
     step_dir_prev = np.zeros(2)
     
     step = 0.3
 
-    count_fin = 20
+    count_fin = 40
     step_dir = np.zeros(2)
-    der_step = 0.0001
+    der_step = 0.001
 
+    b_tot = np.zeros((2, count_fin))
+    b_tot[:,0] = b
+    
     #initial point
     b_ = generate_b(b)
     samples, pot_energy,coul_energy, kin_energy, feenberg_energy,mf_grad,mf_lap,det_mf = sampling_function(r_init, delta, N_s, mode, cut,b_)
@@ -699,7 +700,7 @@ if variational ==1:
             print('energy new =', energy_new,' +- ',energy_err_new )
             
         
-            #phase 1: constant step
+            #increaing step when accepting it
             if (energy_now-energy_new>-np.sqrt(2)*energy_err_new and energy_err_new<energy_err_now) or energy_err_new<energy_err_now: #we accept the step
                 energy_now = energy_new
                 energy_err_now = energy_err_new
@@ -714,15 +715,13 @@ if variational ==1:
                 step = step * 1.4
                 print('ACCEPTED')
                 
-            #phase 2: decaying step
+            #decaying step when not accepting it
             else: # we don't accept the step and diminuish the step
                 step = step/1.5
                 if step<der_step:
                     step = der_step
                 print('NOT ACCEPTED')  
             
-            count= count +1
-            print(' ')
         
         else:
             #SECONDO METODO: USO IL GRADIENTE
@@ -753,18 +752,21 @@ if variational ==1:
             print('derivative', norm/der_step)
             
             #!now I calculate with MC the energy of the new point and decide what to do
-            b = b - step_dir/der_step * 0.5
+            b = b - step_dir/der_step * 0.01
             b_ = generate_b(b)
             samples, pot_energy,coul_energy, kin_energy, feenberg_energy,mf_grad,mf_lap,det_mf = sampling_function(r_init, delta, N_s, mode, cut,b_)
             energy_now = np.mean(pot_energy+kin_energy+coul_energy)
             energy_err_now = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy+coul_energy)**2)-energy_now**2)
             print('energy now =', energy_now,' +- ',energy_err_now )
-            
-            count= count +1
-            print(' ')
+        
+        count= count +1
+        b_tot[:,count-1] = b
+        print(' ')
         
         
-        
+    #plot
+    plt.figure()
+    plt.plot(b_tot[0,:], b_tot[1,:])    
         
     print('final energy = ',energy_now,' +- ', energy_err_now)
     print('b_updown =', b[1])
@@ -774,7 +776,8 @@ if variational ==1:
 t_fin= time.time()
 print('Variational procedure time = ',t_fin-t_in) 
 print(" ")               
-# Possibili minimi: 0.3602, 0.3782, 0.3864
+
+
 
 
 #%% plot around one of the minima
