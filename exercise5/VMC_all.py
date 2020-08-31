@@ -84,10 +84,7 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
     A_inv_down = np.zeros((N_down,N_down,num_det))
     
     [Agradx_up[:,:,0], Agrady_up[:,:,0], Agrad2x_up[:,:,0], Agrad2y_up[:,:,0]] = eval_mf_matrix_grad(r[:,:N_up], N_up, level_up[:,0])
-#    print(A_up)
     A_inv_up[:,:,0] = np.linalg.inv(A_up[:,:,0])   # inverse of matrix A (useful for calculating gradient)
-#    print(A_up)
-#    print(" ")
     [Agradx_down[:,:,0], Agrady_down[:,:,0], Agrad2x_down[:,:,0], Agrad2y_down[:,:,0]] = eval_mf_matrix_grad(r[:,N_up:], N_down, level_down[:,0])
     A_inv_down[:,:,0] = np.linalg.inv(A_down[:,:,0])   # inverse of matrix A (useful for calculating gradient)
     
@@ -114,10 +111,10 @@ def kinetic_energy(r, A_up, A_down,det_mf,b):
     for k in np.arange(num_det):
         for l in np.arange(N_up):
             for i in np.arange(N_up):
-                mf_lap[k] = mf_lap[k] + Agrad2x_up[l,i,k]*A_inv_up[i,l,k] + Agrad2y_up[l,i,k]*A_inv_up[i,l,k]
+                mf_lap[k] = mf_lap[k] + (Agrad2x_up[l,i,k] + Agrad2y_up[l,i,k])*A_inv_up[i,l,k]
         for l in np.arange(N_down):
             for i in np.arange(N_down):
-                mf_lap[k] = mf_lap[k] + Agrad2x_down[l,i,k]*A_inv_down[i,l,k] + Agrad2y_down[l,i,k]*A_inv_down[i,l,k]
+                mf_lap[k] = mf_lap[k] + (Agrad2x_down[l,i,k] + Agrad2y_down[l,i,k])*A_inv_down[i,l,k]
     
     
     # Jastrow part
@@ -206,7 +203,6 @@ def kinetic_energy_var(r, mf_grad, mf_lap,det_mf,b):
         for k in np.arange(2):
             Ugrad2 = Ugrad2 + Ugrad[k,l]*Ugrad[k,l]
     Ulap = Ulap + Ugrad2 
-    
     #kin_en = np.array([1.])
     if num_det ==1:
         #gradient times gradient part
@@ -228,7 +224,6 @@ def kinetic_energy_var(r, mf_grad, mf_lap,det_mf,b):
         mf2_grad[0,:] = mf_grad[0,:,0]/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0]) + mf_grad[0,:,1]/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1])
         mf2_grad[1,:] = mf_grad[1,:,0]/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0]) + mf_grad[1,:,1]/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1])
         mf2_lap = mf_lap[0]*(1/(1+det_mf[0,1]*det_mf[1,1]/det_mf[0,0]/det_mf[1,0])) + mf_lap[1]*(1/(1+det_mf[0,0]*det_mf[1,0]/det_mf[0,1]/det_mf[1,1]))
-        
         #gradient times gradient part
         mf_U_grad2 = np.sum(Ugrad[0,:]*mf2_grad[0,:]+Ugrad[1,:]*mf2_grad[1,:])
     
@@ -238,7 +233,6 @@ def kinetic_energy_var(r, mf_grad, mf_lap,det_mf,b):
         #feenberg energy        SOLO SE usiamo la funzione senza jastrow?
         a = np.sum(np.sum((mf2_grad[:,:]+Ugrad)**2,0))
         feenberg_en = 1/4*(mf2_lap-a)
-
     return kin_en,feenberg_en
 
 """ Jastrow factor part """
@@ -358,10 +352,7 @@ def sampling_function(r, delta, N_s, mode, cut,b):
     pos[:,:,0] = r
     tempa = np.copy(A_up)
     tempb = np.copy(A_down)
-    #print(A_up,A_down)
     kin_energy[0], feenberg_energy[0],mf_grad[:,:,:,0],mf_lap[:,0] = kinetic_energy(r, tempa, tempb, det_mf[:,:,0],b)
-    #print(A_up,A_down)
-    #print(" ")
     pot_energy[0] = potential_energy(r)
     coul_energy[0] = coulomb_energy(r)
     pos_old = r
@@ -384,6 +375,7 @@ def sampling_function(r, delta, N_s, mode, cut,b):
                 pos[:,:,n] = pos_temp
                 pot_energy[n]= potential_energy(pos_temp)
                 coul_energy[n] = coulomb_energy(pos_temp) 
+                det_mf[:,:,n]=det_mf_temp
                 tempa = np.copy(A_up)
                 tempb = np.copy(A_down)
                 kin_energy[n], feenberg_energy[n],mf_grad[:,:,:,n],mf_lap[:,n] = kinetic_energy(pos_temp, tempa, tempb,det_mf_temp,b)
@@ -482,8 +474,8 @@ def occ_levels(L4):
     
 #%% MAIN PARAMETERS DEFINITION
 temp_omega = 1
-temp_num =3
-temp_N_up =2
+temp_num =4
+temp_N_up =3
 temp_N_down = temp_num - temp_N_up
 temp_L4=0
 if temp_num ==4:
@@ -500,18 +492,16 @@ occ_levels(temp_L4)
 r_init = np.random.rand(2, num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
 
 delta = 1.5                 # width of movement
-N_s = 10**5          # number of samples
-cut = 10**3
+N_s = 10**2          # number of samples
+cut = 10**1
 mode = 1
 b= np.zeros((num,num))
 b= generate_b(np.array([0.5,0.25])) #b_upup b_updown
 
 single_trial = 0
+t_in = time.time()
 if single_trial==1:
-    t_in = time.time()
     samples, pot_energy,coul_energy, kin_energy, feenberg_energy,mf_grad,mf_lap,det_mf = sampling_function(r_init, delta, N_s, mode, cut,b)
-    t_fin= time.time()
-    print("Time for single trial = ", t_fin-t_in)
     
     energy = np.mean(pot_energy+kin_energy)
     energy_err = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy)**2)-energy**2)
@@ -527,7 +517,8 @@ if single_trial==1:
     energy_err_fee = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((pot_energy+feenberg_energy+coul_energy)**2)-energy_fee**2)
     print('energy feenberg (kin + pot + coul)=', energy_fee, '+-',energy_err_fee)
     print(" ")
-
+t_fin= time.time()
+print("Single trial time = ", t_fin-t_in)
 
 # plot histrogram
 plot_histogram = 0
@@ -634,16 +625,24 @@ if variational ==1:
     
     count = 0
     step_acc =1 #if we accept the step or not
-    b = np.array([0.5,0.25]) #b_upup b_updown
     #energy_prev = 10000
     step_dir_prev = np.zeros(2)
     
     step = 0.3
 
-    count_fin = 40
+    count_fin = 80
     step_dir = np.zeros(2)
-    der_step = 0.001
+    der_step = 0.0001 #lo terrei così
 
+    # choose your b ([b_upup, b_updown])
+    # num = 2, omega = 1            b = np.array([1., 0.3845])
+    # num = 3, omega = 1            b = np.array([0.215, 0.456])
+    # num = 4, omega = 1, L4 = 1    b = np.array([0.207,0.507])
+    # num = 5, omega = 1            b = np.array([0.2294, 0.525])
+    # num = 6, omega = 1            b = np.array([0.232,0.5449])
+    
+    b = np.array([0.207,0.507]) 
+    
     b_tot = np.zeros((2, count_fin))
     b_tot[:,0] = b
     
@@ -663,8 +662,8 @@ if variational ==1:
     
     while count < count_fin:
         method = 2
-        if method == 1:
-            #PRIMO METODO: CONTROLLIAMO NOI LO STEP
+        if method == 1:#PRIMO METODO: CONTROLLIAMO NOI LO STEP
+            
             print('iteration', count+1)
             print('energy now =', energy_now,' +- ',energy_err_now )
             print('step = ', step)
@@ -723,8 +722,8 @@ if variational ==1:
                 print('NOT ACCEPTED')  
             
         
-        else:
-            #SECONDO METODO: USO IL GRADIENTE
+        else:#SECONDO METODO: USO IL GRADIENTE
+            
             print('iteration', count+1)
             print('energy now =', energy_now,' +- ',energy_err_now )
             
@@ -765,9 +764,10 @@ if variational ==1:
         
         
     #plot
-    plt.figure()
-    plt.plot(b_tot[0,:], b_tot[1,:])    
-        
+    plt.scatter(b_tot[0,:], b_tot[1,:], c = np.arange(count_fin))    
+    plt.xlabel("b_upup") 
+    plt.ylabel("b_updown")
+    
     print('final energy = ',energy_now,' +- ', energy_err_now)
     print('b_updown =', b[1])
     print('b_upup =', b[0])
