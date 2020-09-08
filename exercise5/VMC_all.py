@@ -443,21 +443,18 @@ def occ_levels(L4):
     
 #%% MAIN PARAMETERS DEFINITION
 temp_omega = 1
-<<<<<<< Updated upstream
 temp_num =2
 temp_N_up = 1
 temp_N_down = temp_num -temp_N_up
 temp_L4=0
 if temp_num ==4:
     if temp_N_up ==3:
-=======
 temp_num = 5
 temp_N_up = 3
 temp_N_down = temp_num - temp_N_up
 temp_L4 = 0   # metti sempre a zero quando non ti serve uguale a 2
 if temp_num == 4:
     if temp_N_up == 3:
->>>>>>> Stashed changes
         temp_L4 = 1 #to be set when num=4
     else:
         temp_L4 = 0
@@ -466,8 +463,6 @@ temp_jastrow = 1
 initialize_variables(temp_omega, temp_N_up, temp_N_down,temp_L4, temp_jastrow)
 occ_levels(temp_L4)
 
-<<<<<<< Updated upstream
-=======
 # these are a crude estimation of the minima (PLEASE DON'T CHANGE THEM)
 b_matrix = np.array([[1., 0.384815],        # num = 2, omega = 1
                      [0.215, 0.456],        # num = 3, omega = 1
@@ -487,7 +482,6 @@ b= np.zeros((num, num))
 b= generate_b(choose_b_from_parameters(num, L4, omega, b_matrix)) #b_upup b_updown
 
 # STIMA TEMPI: PER 2 PARTICELLE CON JASTROW
->>>>>>> Stashed changes
 r_init = np.random.rand(2, num)     # initial position NOTE: FIRST 2 PARTICLES MUST BE IN DIFFERENT POSITIONS OTHERWISE DENSITY IS ZERO (E NOI DIVIDIAMO PER LA DENSITà)
 delta = 1.                  # width of movement
 N_s = 10**1          # number of samples
@@ -514,14 +508,13 @@ print('energy + coulomb=', energy, '+-',energy_err)
 
 #%% variational procedure
 t_in = time.time()
-<<<<<<< Updated upstream
+
 
 N_s=10**5
-=======
 N_s = 10**6
->>>>>>> Stashed changes
+
 cut = 10**3
-variational = 1
+variational = 0
 if variational ==1:
     
     count = 0
@@ -534,12 +527,10 @@ if variational ==1:
     
     step = 0.1
 
-<<<<<<< Updated upstream
     count_fin = 30
     step_dir = np.zeros(2)
     der_step = 0.05
 
-=======
     count_fin = 100
     step_dir = np.zeros(2)
     der_step = 0.00001 #lo terrei così
@@ -578,17 +569,15 @@ if variational ==1:
     print('b_upup =', b[0])
     print(' ')
     
-    data_tot = np.zeros((count_fin, 6))
-    
->>>>>>> Stashed changes
+    data_tot = np.zeros((count_fin, 6))   
+
     while count < count_fin:
         print('iteration', count)
-        print('step = ', step)
-        
-<<<<<<< Updated upstream
+        print('step = ', step)     
+
         b1 = b + np.array([1,0])*der_step #b_upup 
         b2 = b + np.array([0,1])*der_step #b_updown
-=======
+
             #increaing step when accepting it
             if (energy_now-energy_new>-np.sqrt(2)*energy_err_new and energy_err_new<energy_err_now) or energy_err_new<energy_err_now: #we accept the step
                 energy_now = energy_new
@@ -695,7 +684,6 @@ if do_we_do_it == 1:
         print(i)
         b1 = b #b_upup 
         b2 = b + b_range[i] #b_updown
->>>>>>> Stashed changes
         b_1 = generate_b(b1)
         b_2 = generate_b(b2)
         b_ = generate_b(b)

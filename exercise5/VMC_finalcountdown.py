@@ -533,21 +533,23 @@ b_upup[13,:] = data_tmp[2,:]
 b_down[13,:] = data_tmp[3,:]
 
 """ Scatterplots """
-# for i in range(n_runs):
+# for i in range(0,7):
 #     plt.figure()
 #     plt.scatter(b_upup[i,:], b_down[i,:], c = np.arange(100))    
 #     plt.xlabel("b_upup") 
 #     plt.ylabel("b_updown")
     
-begin_cut = [0,0,0,0,0,0,0,0,0,0,0,0,0,0] # da inserire a mano dove fare il cut guardando il grafico
+begin_cut = [11,34,32,8,37,29,1,1,15,43,11,48,1,24] # da inserire a mano dove fare il cut guardando il grafico
 
 
 """ Calculate average and std of b upup and b updown """
 for i in range(n_runs):
     b_mean[i,0] = np.mean(b_upup[i,begin_cut[i]:])      
     b_mean[i,1] = np.mean(b_down[i,begin_cut[i]:])      
-    b_std[i,0] = np.std(b_upup[i,begin_cut[i]:])
-    b_std[i,1] = np.std(b_down[i,begin_cut[i]:])
+    #b_std[i,0] = np.std(b_upup[i,begin_cut[i]:])
+    #b_std[i,1] = np.std(b_down[i,begin_cut[i]:])    
+    b_std[i,0] = np.sqrt(1/(100-begin_cut[i]))*np.sqrt(np.mean((b_upup[i,begin_cut[i]:])**2)-b_mean[i,0]**2)
+    b_std[i,1] = np.sqrt(1/(100-begin_cut[i]))*np.sqrt(np.mean((b_down[i,begin_cut[i]:])**2)-b_mean[i,1]**2)
 
 #%%
 """ USE THE Bs TO CALCULATE ENERGY """
@@ -570,7 +572,8 @@ Ns = N_s-cut
 mode = 1
 
 """ Cycle over the 14 different runs """
-for i in range(n_runs): # setta una i singola per non fare un ciclo ma solo una run
+i=0         # setta una i singola per non fare un ciclo ma solo una run
+if 0==0: 
     
     initialize_variables(temp_omega[i], temp_N_up[i], temp_N_down[i], temp_L4[i], temp_jastrow, delta_matrix)
     occ_levels(temp_L4[i])
@@ -580,7 +583,8 @@ for i in range(n_runs): # setta una i singola per non fare un ciclo ma solo una 
     """ Calculate energy and its std """
     samples, pot_energy, coul_energy, kin_energy, feenberg_energy, mf_grad, mf_lap, det_mf = sampling_function(r_init, delta, N_s, mode, cut, b)
     energy[i] = np.mean(pot_energy + kin_energy + coul_energy)
-    energy_err[i] = np.std(pot_energy + kin_energy + coul_energy)
+    #energy_err[i] = np.std(pot_energy + kin_energy + coul_energy)
+    energy_err[i] = np.sqrt(1/(N_s-cut))*np.sqrt(np.mean((kin_energy+pot_energy+coul_energy)**2)-energy[i]**2)
     
     """ Calculate energy from b + err(b) """
     b_mean_1 = b_mean[i,:] + np.array([1,0])*b_std[i,0]
@@ -602,12 +606,12 @@ for i in range(n_runs): # setta una i singola per non fare un ciclo ma solo una 
     save_data[i,1] = b_mean[i,1]
     save_data[i,2] = b_std[i,0]
     save_data[i,3] = b_std[i,1]
-    save_data[i,0] = energy[i]
-    save_data[i,1] = energy_err[i]
-    save_data[i,2] = step_dir[i,0]
-    save_data[i,3] = step_dir[i,1]
+    save_data[i,4] = energy[i]
+    save_data[i,5] = energy_err[i]
+    save_data[i,6] = step_dir[i,0]
+    save_data[i,7] = step_dir[i,1]
     
-    np.savetxt("bs_and_energies_with_errors.txt", save_data, fmt='%.18e', header='b_mean_x - b_mean_y - b_std_x - b_std_y - energy - energy_std - sigma_energy_x - sigma_energy_y', footer='', comments='# ')
+    np.savetxt("bs_energies_"+str(temp_omega[i])+"_"+str(temp_num[i])+"_"+str(temp_L4[i])+".txt", save_data, fmt='%.18e', header='b_mean_x - b_mean_y - b_std_x - b_std_y - energy - energy_std - sigma_energy_x - sigma_energy_y', footer='', comments='# ')
     
 
 
