@@ -502,7 +502,7 @@ b_down[2,:] = data_tmp[3,:]
 data_tmp = np.loadtxt("data_0.5_4_1.txt", unpack = True)
 b_upup[3,:] = data_tmp[2,:]
 b_down[3,:] = data_tmp[3,:]
-data_tmp = np.loadtxt("data_0.5_4_2-bad.txt", unpack = True) # occhio! 
+data_tmp = np.loadtxt("data_0.5_4_2.txt", unpack = True) # occhio! 
 b_upup[4,:] = data_tmp[2,:]
 b_down[4,:] = data_tmp[3,:]
 data_tmp = np.loadtxt("data_0.5_5_0.txt", unpack = True)
@@ -525,7 +525,7 @@ b_down[10,:] = data_tmp[3,:]
 data_tmp = np.loadtxt("data_1_4_2.txt", unpack = True)
 b_upup[11,:] = data_tmp[2,:]
 b_down[11,:] = data_tmp[3,:]
-data_tmp = np.loadtxt("data_1_6_0.txt", unpack = True) # occhio!
+data_tmp = np.loadtxt("data_1_5_0.txt", unpack = True) # occhio!
 b_upup[12,:] = data_tmp[2,:]
 b_down[12,:] = data_tmp[3,:]
 data_tmp = np.loadtxt("data_1_6_0.txt", unpack = True)
